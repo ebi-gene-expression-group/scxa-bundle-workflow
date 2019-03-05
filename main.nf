@@ -1,18 +1,13 @@
 #!/usr/bin/env nextflow
 
-matrix_file = file("${params.scanpy.matrix.raw}")
-matrix_name = matrix_file.getSimpleName()
+resultsRoot = params.resultsRoot
 
-tpm_matrix_file = file("${params.scanpy.matrix.tpm}")
-tpm_matrix_name = tpm_matrix_file.getSimpleName()
-
-SCANPY_TSNE = Channel.fromPath( "$WORKFLOW_RESULTS_DIR/tsne/embeddings*.csv" )
-SCANPY_CLUSTERS = Channel.fromPath( "$WORKFLOW_RESULTS_DIR/clustering/clusters.txt" )
-RAW_FILTERED_MATRIX = Channel.fromPath( "$WORKFLOW_RESULTS_DIR/matrices/${matrix_name}_filter_cells_genes.zip" )
-RAW_TPM_MATRIX = Channel.fromPath( "$WORKFLOW_RESULTS_DIR/matrices/${tpm_matrix_name}.zip" )
-NORMALISED_MATRIX = Channel.fromPath( "$WORKFLOW_RESULTS_DIR/matrices/${matrix_name}_normalised.zip" )
-SCANPY_CLUSTERS = Channel.fromPath( "$WORKFLOW_RESULTS_DIR/clustering/clusters.txt" )
-SCANPY_MARKERS = Channel.fromPath( "$WORKFLOW_RESULTS_DIR/markers/markers_*.csv" )
+RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
+NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
+RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfExists: true)
+SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
+SCANPY_TSNE = Channel.fromPath( "$resultsRoot/tsne/embeddings*.csv", checkIfExists: true )
+SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/markers/markers_*.csv", checkIfExists: true )
 
 // Send channels to different processes
 
@@ -68,7 +63,7 @@ process filter_tpms {
 
 process compress_filtered_tpms {
     
-    publishDir "$WORKFLOW_RESULTS_DIR/bundle", mode: 'copy', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
     input:
         set val(matName), file(mtx) from TPM_FILTER_CELLS_MTX
@@ -90,7 +85,7 @@ process compress_filtered_tpms {
 
 process make_software_report {
 
-    publishDir "$WORKFLOW_RESULTS_DIR/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     output:
         file "software.tsv" into SOFTWARE
@@ -119,7 +114,7 @@ process mark_perplexities {
 
 process tsne_to_tsv {
     
-    publishDir "$WORKFLOW_RESULTS_DIR/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
         set val(perplexity), file(embeddings) from EMBEDDINGS_BY_PERPLEXITY
@@ -155,7 +150,7 @@ process transform_clusters{
 
     conda 'r-base'
     
-    publishDir "$WORKFLOW_RESULTS_DIR/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
         
     input:
         file clustersFile from SCANPY_CLUSTERS
@@ -188,7 +183,7 @@ RAW_FILTERED_TPM_MATRIX.into{
 
 process repackage_matrices {
 
-    publishDir "$WORKFLOW_RESULTS_DIR/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
         file expressionMatrix from RAW_FILTERED_MATRIX_FOR_MTX.concat(NORMALISED_MATRIX_FOR_MTX).concat(RAW_FILTERED_TPM_MATRIX_FOR_MTX)
@@ -218,7 +213,7 @@ process mtx_to_tsv {
     
     conda 'bioconductor-dropletutils r-data.table'
 
-    publishDir "$WORKFLOW_RESULTS_DIR/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 ? 'retry' : 'finish' }
@@ -287,7 +282,7 @@ process mark_marker_resolutions {
 
 process markers_to_tsv {
     
-    publishDir "$WORKFLOW_RESULTS_DIR/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
         set val(resolution), file(markersFile) from MARKERS_BY_RESOLUTION
@@ -333,7 +328,7 @@ MARKER_MANIFEST_LINES
 
 process manifest {
 
-    publishDir "$WORKFLOW_RESULTS_DIR/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
         file software from SOFTWARE
