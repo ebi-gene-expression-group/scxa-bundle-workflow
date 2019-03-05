@@ -8,6 +8,7 @@ RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfEx
 SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
 SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/embeddings*.csv", checkIfExists: true )
 SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv", checkIfExists: true )
+softwareTemplate = params.softwareTemplate
 
 // Send channels to different processes
 
@@ -91,7 +92,7 @@ process make_software_report {
         file "software.tsv" into SOFTWARE
 
     """
-        $SCRIPTS_DIR/generateSoftwareReport.sh $SCXA_WORKFLOW software.tsv
+        generateSoftwareReport.sh ${softwareTemplate} software.tsv
     """
 }
 
