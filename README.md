@@ -27,9 +27,9 @@ Expected inputs are:
  * A raw count matrix, filtered by e.g. Scanpy to remove bad cells and genes.
  * A normalised count matrix, e.g. as produced by Scanpy, with the same dimensions as the filtered matrix.
  * A matrix of abundances, in transcripts per million (TPM). The rows and columns of this matrix will be filtered to match the count matrices.
- * t-SNE embeddings as output by scanpy-scripts
- * Cell clusters as output by scanpy-scripts
- * Cell cluster markers as output by scanpy-scripts
+ * t-SNE embeddings as output by [scanpy-scripts](https://github.com/ebi-gene-expression-group/scanpy-scripts)
+ * Cell clusters as output by [scanpy-scripts](https://github.com/ebi-gene-expression-group/scanpy-scripts)
+ * Cell cluster markers as output by [scanpy-scripts](https://github.com/ebi-gene-expression-group/scanpy-scripts)
  
 ### Parameters
  
@@ -49,6 +49,6 @@ This will download the workflow, create any necessary environments, and run the 
 Future executions will use a cached copy of the pipeline, should you wish to update the code in future, you can do so like:
 
 ```
-nextflow pull ebi-gene-expression-group/scanpy-bundle-workflow
+nextflow pull ebi-gene-expression-group/scxa-bundle-workflow
 ```
 
