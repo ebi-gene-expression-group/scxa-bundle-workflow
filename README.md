@@ -40,10 +40,12 @@ You can copy the default configuration, edit the Scanpy and other parameters, an
 The workflow can be run directly from the repository:
 
 ```
-nextflow run -config <your nextflow.config> ebi-gene-expression-group/scanpy-bundle-workflow --resultsRoot <results dir> --rawFilteredMatrix <raw matrix file name> --normalisedMatrix <normalised matrix file name> --tpmMatrix <matrix of TPM values> --clusters <clusers file> --tsneDir <subdirectory with t-SNE embedings> --markersDir <subdirectory with cluster markers> 
+nextflow run -config <your nextflow.config> ebi-gene-expression-group/scanpy-bundle-workflow --resultsRoot <results dir> --rawFilteredMatrix <raw matrix file name> --normalisedMatrix <normalised matrix file name> --tpmMatrix <matrix of TPM values> --clusters <clusers file> --tsneDir <subdirectory with t-SNE embedings> --markersDir <subdirectory with cluster markers> --softwareTemplate <software template file> 
 ```
 
 This will download the workflow, create any necessary environments, and run the workflow with the specified inputs. Input files and subdirectories are expected to exist in the specified results directory. Output will be to a directory called 'bundle' in the same location.
+
+The software template file lists the software used for each process, the workflows in which that process was run, and the enviroment used within that workflow. Associated environment files can then be checked for versions which are added to the software report. See [here](https://github.com/ebi-gene-expression-group/scxa-smartseq-workflow/blob/master/conf/smartseq.software.tsv) for the master software template in the SMART-seq workflow. 
 
 
 Future executions will use a cached copy of the pipeline, should you wish to update the code in future, you can do so like:
