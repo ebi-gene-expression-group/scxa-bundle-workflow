@@ -1,0 +1,6 @@
+name: bioconductor-dropletutils
+dependencies:
+  - r-base
+  - bioconductor-dropletutils
+  - zip
+  - r-data.table

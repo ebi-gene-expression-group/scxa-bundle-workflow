@@ -28,7 +28,7 @@ NORMALISED_MATRIX.into{
 
 process filter_tpms {
 
-    conda 'bioconductor-dropletutils zip'
+    conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
     
     memory { 2.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 ? 'retry' : 'finish' }
@@ -212,7 +212,7 @@ process repackage_matrices {
 
 process mtx_to_tsv {
     
-    conda 'bioconductor-dropletutils r-data.table'
+    conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
 
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
