@@ -232,7 +232,7 @@ process mtx_to_tsv {
         
         suppressPackageStartupMessages(require(DropletUtils))
         suppressPackageStartupMessages(require(data.table))
-        source(file.path(Sys.getenv(c("SCRIPTS_DIR")), "utils.R"))    
+        source(file.path(Sys.getenv(c("SCXA_BIN")), "utils.R"))
    
         unzip('$expressionMatrix')
         sce <- read10xCounts(sub('.zip', '', '$expressionMatrix'))
