@@ -4,3 +4,5 @@ dependencies:
   - bioconductor-dropletutils
   - zip
   - r-data.table
+  - bioconductor-genomeinfodbdata=1.1
+  - openssl=1.0
