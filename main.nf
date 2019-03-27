@@ -42,8 +42,8 @@ RAW_TPM_MATRIX.into{
 process reference_lines {
 
     input:
-        input file(referenceFasta) from REFERENCE_FASTA
-        input file(referenceGtf) from REFERENCE_GTF
+        file(referenceFasta) from REFERENCE_FASTA
+        file(referenceGtf) from REFERENCE_GTF
 
     output:
         stdout REFERENCE_MANIFEST_LINES 
