@@ -9,6 +9,8 @@ RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfEx
 SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
 SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/embeddings*.csv", checkIfExists: true )
 SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv", checkIfExists: true )
+REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
+REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
 softwareTemplate = params.softwareTemplate
 
 // Send channels to different processes
@@ -33,6 +35,23 @@ RAW_TPM_MATRIX.into{
     RAW_TPM_MATRIX_FOR_FILTERING
     RAW_TPM_MATRIX_FOR_MTX
     RAW_TPM_MATRIX_FOR_TSV
+}
+
+// Make manifest lines for references
+
+process matrix_lines {
+
+    input:
+        input file(referenceFasta) from REFERENCE_FASTA
+        input file(referenceGtf) from REFERENCE_GTF
+
+    output:
+        stdout REFERENCE_MANIFEST_LINES 
+
+    """
+    echo -e "reference_transcriptome\t$referenceFasta\t"
+    echo -e "reference_annotation\t$referenceGtf\t"
+    """
 }
 
 // We need a TPM matrix for the same cell and gene sets as the Scanpy-filtered
@@ -371,6 +390,7 @@ process manifest {
         file matrices from MATRIX_MANIFEST_CONTENT
         file clusters from BUNDLE_CLUSTERS
         file markers from MARKER_MANIFEST_CONTENT
+        file reference from REFERENCE_MANIFEST_LINES
 
     output:
         file "MANIFEST"
@@ -381,6 +401,7 @@ process manifest {
         cat ${tsne} >> MANIFEST
         cat ${matrices} >> MANIFEST
         cat ${markers} >> MANIFEST
+        cat ${reference} >> MANIFEST
         echo -e "cluster_memberships\t${clusters}" >> MANIFEST
     """
 
