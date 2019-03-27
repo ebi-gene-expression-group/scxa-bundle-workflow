@@ -2,6 +2,7 @@
 
 resultsRoot = params.resultsRoot
 
+RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
 RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
 NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
 RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfExists: true)
@@ -12,6 +13,11 @@ softwareTemplate = params.softwareTemplate
 
 // Send channels to different processes
 
+RAW_MATRIX.into{
+    RAW_MATRIX_FOR_MTX
+    RAW_MATRIX_FOR_TSV
+}
+
 RAW_FILTERED_MATRIX.into{
     RAW_FILTERED_MATRIX_FOR_TPM_FILTERING
     RAW_FILTERED_MATRIX_FOR_MTX
@@ -21,6 +27,12 @@ RAW_FILTERED_MATRIX.into{
 NORMALISED_MATRIX.into{
     NORMALISED_MATRIX_FOR_MTX
     NORMALISED_MATRIX_FOR_TSV
+}
+
+RAW_TPM_MATRIX.into{
+    RAW_TPM_MATRIX_FOR_FILTERING
+    RAW_TPM_MATRIX_FOR_MTX
+    RAW_TPM_MATRIX_FOR_TSV
 }
 
 // We need a TPM matrix for the same cell and gene sets as the Scanpy-filtered
@@ -36,7 +48,7 @@ process filter_tpms {
     
     input:
         file(filteredCountsMatrix) from RAW_FILTERED_MATRIX_FOR_TPM_FILTERING
-        file(tpmMatrix) from RAW_TPM_MATRIX
+        file(tpmMatrix) from RAW_TPM_MATRIX_FOR_FILTERING
 
     output:
         set val("${tpmMatrix.getBaseName()}"), file("${tpmMatrix.getBaseName()}_filter_cells_genes/matrix.mtx") into TPM_FILTER_CELLS_MTX
@@ -172,7 +184,7 @@ process transform_clusters{
 // Repackage the matrices 
 
 
-Channel.from( 'raw_filtered', 'normalised', 'tpm_filtered' ).into{
+Channel.from( 'raw', 'tpm', 'raw_filtered', 'normalised', 'tpm_filtered' ).into{
     EXPRESSION_TYPES_FOR_MTX
     EXPRESSION_TYPES_FOR_TSV
 }
@@ -182,12 +194,23 @@ RAW_FILTERED_TPM_MATRIX.into{
     RAW_FILTERED_TPM_MATRIX_FOR_TSV
 }
 
+// Collect a list of matrices to repackage 
+
+RAW_MATRIX_FOR_MTX
+    .concat(RAW_TPM_MATRIX_FOR_MTX)
+    .concat(RAW_FILTERED_MATRIX_FOR_MTX)
+    .concat(NORMALISED_MATRIX_FOR_MTX)
+    .concat(RAW_FILTERED_TPM_MATRIX_FOR_MTX)
+    .set{
+        MATRICES_TO_REPACKAGE
+    }
+
 process repackage_matrices {
 
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
-        file expressionMatrix from RAW_FILTERED_MATRIX_FOR_MTX.concat(NORMALISED_MATRIX_FOR_MTX).concat(RAW_FILTERED_TPM_MATRIX_FOR_MTX)
+        file expressionMatrix from MATRICES_TO_REPACKAGE
         val expressionType from EXPRESSION_TYPES_FOR_MTX
 
     output:
@@ -208,6 +231,17 @@ process repackage_matrices {
 
 }
 
+// Collect a list of matrices to convert to tsv
+
+RAW_MATRIX_FOR_TSV
+    .concat(RAW_TPM_MATRIX_FOR_TSV)
+    .concat(RAW_FILTERED_MATRIX_FOR_TSV)
+    .concat(NORMALISED_MATRIX_FOR_TSV)
+    .concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
+    .set{
+        MATRICES_FOR_TSV
+    }
+
 // Make tsv-format matrices
 
 process mtx_to_tsv {
@@ -221,7 +255,7 @@ process mtx_to_tsv {
     maxRetries 20
     
     input:
-        file expressionMatrix from RAW_FILTERED_MATRIX_FOR_TSV.concat(NORMALISED_MATRIX_FOR_TSV).concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
+        file expressionMatrix from MATRICES_FOR_TSV
         val expressionType from EXPRESSION_TYPES_FOR_TSV
         
     output:
