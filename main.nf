@@ -39,7 +39,7 @@ RAW_TPM_MATRIX.into{
 
 // Make manifest lines for references
 
-process matrix_lines {
+process reference_lines {
 
     input:
         input file(referenceFasta) from REFERENCE_FASTA
