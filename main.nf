@@ -98,9 +98,7 @@ process compress_filtered_tpms {
     publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
     input:
-        set val(matName), file(mtx) from TPM_FILTER_CELLS_MTX
-        set val(matName), file(genes) from TPM_FILTER_CELLS_MTX_ROWS
-        set val(matName), file(barcodes) from TPM_FILTER_CELLS_MTX_COLS
+        set val(matName), file(mtx), file(genes), file(barcodes) from TPM_FILTER_CELLS_MTX.join(TPM_FILTER_CELLS_MTX_ROWS).join(TPM_FILTER_CELLS_MTX_COLS)
 
     output:
         file("${matName}_filter_cells_genes.zip") into RAW_FILTERED_TPM_MATRIX
@@ -301,10 +299,7 @@ process mtx_to_tsv {
 process matrix_lines {
 
     input:
-        set val(expressionType), file(matrixRows) from MTX_MATRIX_ROWNAMES
-        set val(expressionType), file(matrixCols) from MTX_MATRIX_COLNAMES
-        set val(expressionType), file(matrixContent) from MTX_MATRIX_CONTENT
-        set val(expressionType), file(tsvMatrix) from TSV_MATRICES
+        set val(expressionType), file(matrixRows), file(matrixCols), file(matrixContent), file(tsvMatrix) from MTX_MATRIX_ROWNAMES.join(MTX_MATRIX_COLNAMES).join(MTX_MATRIX_CONTENT).join(TSV_MATRICES)
 
     output:
         stdout MATRIX_MANIFEST_LINES 
