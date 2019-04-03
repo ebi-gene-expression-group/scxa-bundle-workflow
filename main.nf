@@ -268,7 +268,7 @@ process mtx_to_tsv {
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     memory { 5.GB * task.attempt }
-    errorStrategy { task.exitStatus == 130 ? 'retry' : 'finish' }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
     
     input:
