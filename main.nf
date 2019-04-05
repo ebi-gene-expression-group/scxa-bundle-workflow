@@ -3,23 +3,23 @@
 resultsRoot = params.resultsRoot
 
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
-RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
 REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
 softwareTemplate = params.softwareTemplate
 
 if ( params.tertiary == 'yes'){
+    RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfExists: true)
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
     SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/embeddings*.csv", checkIfExists: true )
     SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv", checkIfExists: true )
 }else{
-    NORMALISED_MATRIX = empty()
-    RAW_TPM_MATRIX = empty()
-    SCANPY_CLUSTERS = empty()
-    SCANPY_TSNE = empty()
-    SCANPY_MARKERS = empty()
+    NORMALISED_MATRIX = Channel.empty()
+    RAW_TPM_MATRIX = Channel.empty()
+    SCANPY_CLUSTERS = Channel.empty()
+    SCANPY_TSNE = Channel.empty()
+    SCANPY_MARKERS = Channel.empty()
 }
 
 // Send channels to different processes
