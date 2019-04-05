@@ -15,6 +15,7 @@ if ( params.tertiary == 'yes'){
     SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/embeddings*.csv", checkIfExists: true )
     SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv", checkIfExists: true )
 }else{
+    RAW_FILTERED_MATRIX = Channel.empty()
     NORMALISED_MATRIX = Channel.empty()
     RAW_TPM_MATRIX = Channel.empty()
     SCANPY_CLUSTERS = Channel.empty()
