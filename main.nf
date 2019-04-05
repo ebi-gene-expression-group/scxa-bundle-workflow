@@ -162,7 +162,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow'){
 
 SOFTWARE
     .collectFile(name: 'software.tsv', storeDir: "$resultsRoot/bundle", keepHeader: true)
-    .set{ SOFTWARE_FOR_MANIFEST }}
+    .set{ SOFTWARE_FOR_MANIFEST }
 
 // Find out what perplexities are represented by the t-SNE files
 
