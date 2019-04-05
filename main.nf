@@ -387,8 +387,6 @@ MARKER_MANIFEST_LINES
 
 process base_manifest {
 
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
-    
     input:
         file matrices from MATRIX_MANIFEST_CONTENT
         file software from SOFTWARE
