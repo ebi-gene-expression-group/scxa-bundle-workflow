@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-template=$1
+subworkflow=$1
 outfile=$2
+
+template=${NXF_ASSETS}/${NXF_ORG}/$subworkflow/conf/software.tsv
 
 if [ ! -e "$template" ]; then
     echo "Software versions file $template does not exist" 1>&2
@@ -15,11 +17,10 @@ fi
 echo -e "Analysis\tSoftware\tVersion\tCitation" > $outfile
 tail -n +2 $template | while read -r l; do
     analysis=$(echo "$l" | awk -F'\t' '{print $1}')
-    subworkflow=$(echo "$l" | awk -F'\t' '{print $2}')
-    software=$(echo "$l" | awk -F'\t' '{print $3}')
-    environment=$(echo "$l" | awk -F'\t' '{print $4}')
-    package=$(echo "$l" | awk -F'\t' '{print $5}')
-    citation=$(echo "$l" | awk -F'\t' '{print $6}')
+    software=$(echo "$l" | awk -F'\t' '{print $2}')
+    environment=$(echo "$l" | awk -F'\t' '{print $3}')
+    package=$(echo "$l" | awk -F'\t' '{print $4}')
+    citation=$(echo "$l" | awk -F'\t' '{print $5}')
 
     environment_file=${NXF_ASSETS}/${NXF_ORG}/$subworkflow/envs/${environment}.yml
     if [ ! -e "$environment_file" ]; then

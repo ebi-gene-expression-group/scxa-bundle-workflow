@@ -1,13 +1,14 @@
 #!/usr/bin/env nextflow
 
 resultsRoot = params.resultsRoot
+baseWorkflow = params.baseWorkflow
+tertiaryWorkflow = params.tertiaryWorkflow
 
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
 REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
-softwareTemplate = params.softwareTemplate
 
-if ( params.tertiary == 'yes'){
+if ( tertiaryWorkflow == 'scanpy-workflow'){
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfExists: true)
@@ -123,17 +124,45 @@ process compress_filtered_tpms {
 
 // Report software versions
 
-process make_software_report {
+process make_base_software_report {
 
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     output:
-        file "software.tsv" into SOFTWARE
+        file "${baseWorkflow}.software.tsv" into BASE_SOFTWARE
 
     """
-        generateSoftwareReport.sh ${softwareTemplate} software.tsv
+        generateSoftwareReport.sh ${baseWorkflow} software.tsv
     """
 }
+
+
+if ( tertiaryWorkflow == 'scanpy-workflow'){
+
+    process make_tertiary_software_report {
+
+        publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+        
+        output:
+            file "${tertiaryWorfklow}.software.tsv" into TERTIARY_SOFTWARE
+
+        """
+            generateSoftwareReport.sh ${tertiaryWorkflow} software.tsv
+        """
+    }
+
+    BASE_SOFTWARE
+        .concat(TERTIARY_SOFTWARE)
+        .set{ SOFTWARE }
+
+}else{
+    BASE_SOFTWARE
+        .set{ SOFTWARE }
+}
+
+SOFTWARE
+    .collectFile(name: 'software.tsv', storeDir: "$resultsRoot/bundle", keepHeader: true)
+    .set{ SOFTWARE_FOR_MANIFEST }}
 
 // Find out what perplexities are represented by the t-SNE files
 
@@ -389,7 +418,7 @@ process base_manifest {
 
     input:
         file matrices from MATRIX_MANIFEST_CONTENT
-        file software from SOFTWARE
+        file software from SOFTWARE_FOR_MANIFEST 
         file reference from REFERENCE_MANIFEST_LINES
 
     output:
@@ -397,7 +426,7 @@ process base_manifest {
 
     """
         echo -e "Description\tFile\tParameterisation" > BASE_MANIFEST
-        echo -e "software_versions_file\t${software}\t" >> BASE_MANIFEST
+        echo -e "software_versions_file\t\$(basename ${software})\t" >> BASE_MANIFEST
         cat ${matrices} >> BASE_MANIFEST
         cat ${reference} >> BASE_MANIFEST
     """
@@ -407,7 +436,7 @@ process base_manifest {
 // Add in any tertiary data to the bundle. If there's no teriary data, just
 // copy the base manifest
 
-if ( params.tertiary == 'yes'){
+if ( tertiaryWorkflow == 'scanpy-workflow'){
 
     process tertiary_manifest {
 
