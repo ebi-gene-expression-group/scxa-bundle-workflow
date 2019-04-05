@@ -385,29 +385,70 @@ MARKER_MANIFEST_LINES
 
 // Build the manifest from collected components
 
-process manifest {
+process base_manifest {
 
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
-        file software from SOFTWARE
-        file tsne from TSNE_MANIFEST_CONTENT
         file matrices from MATRIX_MANIFEST_CONTENT
-        file clusters from BUNDLE_CLUSTERS
-        file markers from MARKER_MANIFEST_CONTENT
+        file software from SOFTWARE
         file reference from REFERENCE_MANIFEST_LINES
 
     output:
-        file "MANIFEST"
+        file "BASE_MANIFEST" into BASE_MANIFEST
 
     """
-        echo -e "Description\tFile\tParameterisation" > MANIFEST
-        echo -e "software_versions_file\t${software}\t" >> MANIFEST
-        cat ${tsne} >> MANIFEST
-        cat ${matrices} >> MANIFEST
-        cat ${markers} >> MANIFEST
-        cat ${reference} >> MANIFEST
-        echo -e "cluster_memberships\t${clusters}" >> MANIFEST
+        echo -e "Description\tFile\tParameterisation" > BASE_MANIFEST
+        echo -e "software_versions_file\t${software}\t" >> BASE_MANIFEST
+        cat ${matrices} >> BASE_MANIFEST
+        cat ${reference} >> BASE_MANIFEST
     """
 
 }
+
+// Add in any tertiary data to the bundle. If there's no teriary data, just
+// copy the base manifest
+
+if ( params.tertiary == 'yes'){
+
+    process tertiary_manifest {
+
+        publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+        
+        input:
+            file baseManifest from BASE_MANIFEST
+            file tsne from TSNE_MANIFEST_CONTENT
+            file clusters from BUNDLE_CLUSTERS
+            file markers from MARKER_MANIFEST_CONTENT
+
+        output:
+            file "MANIFEST"
+
+        """
+            cp $baseManifest MANIFEST
+            cat ${tsne} >> MANIFEST
+            cat ${markers} >> MANIFEST
+            echo -e "cluster_memberships\t${clusters}" >> MANIFEST
+        """
+
+    }
+
+}else{
+
+    process publish_manifest {
+        
+        publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+        
+        input:
+            file baseManifest from BASE_MANIFEST
+
+        output:
+            file "MANIFEST"
+
+        """
+            cp $baseManifest MANIFEST
+        """
+    } 
+
+}
+
