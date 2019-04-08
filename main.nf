@@ -4,7 +4,12 @@ dropletProtocols = [ '10xv1', '10xv1a', '10xv1i', '10xv2', 'drop-seq' ]
 smartProtocols = [ 'smart-seq', 'smart-seq2', 'smarter', 'smart-like' ]
 
 resultsRoot = params.resultsRoot
-tertiaryWorkflow = params.tertiaryWorkflow
+
+if ( params.containsKey('tertiaryWorkflow' )){
+    tertiaryWorkflow = params.tertiaryWorkflow
+}else{
+    tertiaryWorkflow = 'none'
+}
 
 PROTOCOL_LIST = Channel.from(params.protocolList.split(','))
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
