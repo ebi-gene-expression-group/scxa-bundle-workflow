@@ -142,9 +142,9 @@ process make_base_software_report {
 
     script:
 
-        if ( dropletProtocols.contains(protocol) {
+        if ( dropletProtocols.contains(protocol) ) {
             baseWorkflow = 'scxa-droplet-workflow'
-        } else if ( smartProtocols.contains(protocol) {
+        } else if ( smartProtocols.contains(protocol) ) {
             baseWorkflow = 'scxa-smart-workflow'
         } else {
             baseWorkflow = ''
