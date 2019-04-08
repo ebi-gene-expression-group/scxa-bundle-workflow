@@ -4,6 +4,7 @@ dropletProtocols = [ '10xv1', '10xv1a', '10xv1i', '10xv2', 'drop-seq' ]
 smartProtocols = [ 'smart-seq', 'smart-seq2', 'smarter', 'smart-like' ]
 
 resultsRoot = params.resultsRoot
+masterWorkflow = params.masterWorkflow
 
 if ( params.containsKey('tertiaryWorkflow' )){
     tertiaryWorkflow = params.tertiaryWorkflow
@@ -134,6 +135,17 @@ process compress_filtered_tpms {
     """
 }
 
+// Report sotware from master workflow
+
+process master_workflow_software {
+
+    output:
+        file('master.software.tsv') into MASTER_SOFTWARE
+
+    """
+        generateSoftwareReport.sh ${masterWorkflow} master.software.tsv
+    """        
+}
 
 // Report software versions
 
@@ -166,7 +178,8 @@ process make_base_software_report {
     """
 }
 
-BASE_SOFTWARE
+MASTER_SOFTWARE
+    .concat(BASE_SOFTWARE)
     .collectFile(name: 'software.tsv', newLine: true, keepHeader: true )
     .set { ALL_BASE_SOFTWARE }
 
