@@ -495,7 +495,7 @@ process base_manifest {
         echo -e "software_versions_file\t\$(basename ${software})\t" >> BASE_MANIFEST
         cat ${matrices} >> BASE_MANIFEST
         cat ${reference} >> BASE_MANIFEST
-        echo -e protocol\t\t${params.protocolList}
+        echo -e protocol\t\t${params.protocolList} >> BASE_MANIFEST
     """
 
 }
