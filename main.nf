@@ -349,10 +349,10 @@ process matrix_lines {
         stdout MATRIX_MANIFEST_LINES 
 
     """
-    echo -e "mtx_matrix_rows\t$matrixRows\t$expressionType"
-    echo -e "mtx_matrix_cols\t$matrixCols\t$expressionType"
-    echo -e "mtx_matrix_content\t$matrixContent\t$expressionType"
-    echo -e "tsv_matrix\t$tsvMatrix\t$expressionType"
+    echo -e "mtx_matrix_rows\t$expressionType/$matrixRows\t$expressionType"
+    echo -e "mtx_matrix_cols\t$expressionType/$matrixCols\t$expressionType"
+    echo -e "mtx_matrix_content\t$expressionType/$matrixContent\t$expressionType"
+    echo -e "tsv_matrix\t$expressionType/$tsvMatrix\t$expressionType"
     """
 }
 
