@@ -158,7 +158,7 @@ process make_base_software_report {
 
     """
         if [ -z "$baseWorkflow" ]; then
-            echo "I don't know what workflow would have been used for $proocol" 1>&2
+            echo "I don't know what workflow would have been used for $protocol" 1>&2
             exit 1
         fi
 
