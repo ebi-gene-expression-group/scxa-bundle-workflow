@@ -150,7 +150,7 @@ process make_base_software_report {
         if ( dropletProtocols.contains(protocol) ) {
             baseWorkflow = 'scxa-droplet-workflow'
         } else if ( smartProtocols.contains(protocol) ) {
-            baseWorkflow = 'scxa-smart-workflow'
+            baseWorkflow = 'scxa-smartseq-workflow'
         } else {
             baseWorkflow = ''
         }
