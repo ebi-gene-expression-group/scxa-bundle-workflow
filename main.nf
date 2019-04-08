@@ -174,7 +174,7 @@ process make_base_software_report {
             exit 1
         fi
 
-        generateSoftwareReport.sh ${baseWorkflow} software.tsv
+        generateSoftwareReport.sh ${baseWorkflow} ${protocol}.software.tsv
     """
 }
 
