@@ -1,9 +1,12 @@
 #!/usr/bin/env nextflow
 
+dropletProtocols = [ '10xv1', '10xv1a', '10xv1i', '10xv2', 'drop-seq' ]
+smartProtocols = [ 'smart-seq', 'smart-seq2', 'smarter', 'smart-like' ]
+
 resultsRoot = params.resultsRoot
-baseWorkflow = params.baseWorkflow
 tertiaryWorkflow = params.tertiaryWorkflow
 
+PROTOCOL_LIST = Channel.from(params.protocolList.split(','))
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
 REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
@@ -131,16 +134,36 @@ process compress_filtered_tpms {
 
 process make_base_software_report {
 
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
-    
+    input:
+        val(protocol) from PROTOCOL_LIST 
+
     output:
-        file "${baseWorkflow}.software.tsv" into BASE_SOFTWARE
+        file "${protocol}.software.tsv" into BASE_SOFTWARE
+
+    script:
+
+        if ( dropletProtocols.contains(protocol) {
+            baseWorkflow = 'scxa-droplet-workflow'
+        } else if ( smartProtocols.contains(protocol) {
+            baseWorkflow = 'scxa-smart-workflow'
+        } else {
+            baseWorkflow = ''
+        }
+    
 
     """
+        if [ -z "$baseWorkflow" ]; then
+            echo "I don't know what workflow would have been used for $proocol" 1>&2
+            exit 1
+        fi
+
         generateSoftwareReport.sh ${baseWorkflow} software.tsv
     """
 }
 
+BASE_SOFTWARE
+    .collectFile(name: 'software.tsv', newLine: true, keepHeader: true )
+    .set { ALL_BASE_SOFTWARE }
 
 if ( tertiaryWorkflow == 'scanpy-workflow'){
 
@@ -156,18 +179,38 @@ if ( tertiaryWorkflow == 'scanpy-workflow'){
         """
     }
 
-    BASE_SOFTWARE
+    ALL_BASE_SOFTWARE
         .concat(TERTIARY_SOFTWARE)
         .set{ SOFTWARE }
 
 }else{
-    BASE_SOFTWARE
+    ALL_BASE_SOFTWARE
         .set{ SOFTWARE }
 }
 
 SOFTWARE
     .collectFile(name: 'software.tsv', storeDir: "$resultsRoot/bundle", keepHeader: true)
-    .set{ SOFTWARE_FOR_MANIFEST }
+    .set{ MERGED_SOFTWARE }
+
+
+// Make sure we have no duplicate lines from merging software reports
+
+process finalise_software {
+
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+
+    input:
+        file(software) from MERGED_SOFTWARE
+
+    output:
+        file('output/software.tsv') into SOFTWARE_FOR_MANIFEST
+
+    """
+    mkdir -p output
+    head -n 1 $software > output/software.tsv
+    tail -n +2 $software | sort | uniq >> output/software.tsv
+    """
+}
 
 // Find out what perplexities are represented by the t-SNE files
 
@@ -434,6 +477,7 @@ process base_manifest {
         echo -e "software_versions_file\t\$(basename ${software})\t" >> BASE_MANIFEST
         cat ${matrices} >> BASE_MANIFEST
         cat ${reference} >> BASE_MANIFEST
+        echo -e protocol\t\t${params.protocolList}
     """
 
 }
