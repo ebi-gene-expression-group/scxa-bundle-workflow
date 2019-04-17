@@ -379,7 +379,7 @@ process cell_count {
 
     """
         zipdir=\$(unzip -qql ${expressionMatrix} | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
-        unzip -p ${expressionMatrix} \${zipdir}/barcodes.tsv | wc -l | | tr -d \'\\n\'  
+        unzip -p ${expressionMatrix} \${zipdir}/barcodes.tsv | wc -l | tr -d \'\\n\'  
         
         mkdir -p out
         cp -p $expressionMatrix out/${expressionMatrix}
