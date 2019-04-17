@@ -309,6 +309,7 @@ process transform_clusters{
 Channel.from( 'raw', 'tpm', 'raw_filtered', 'normalised', 'tpm_filtered' ).into{
     EXPRESSION_TYPES_FOR_MTX
     EXPRESSION_TYPES_FOR_TSV
+    EXPRESSION_TYPES_FOR_PRINT
 }
 
 RAW_FILTERED_TPM_MATRIX.into{
@@ -394,7 +395,9 @@ MATRICES_FOR_TSV_WITH_COUNT
         PRINT
     }
 
-PRINT.subscribe { println it }
+PRINT
+    .merge( EXPRESSION_TYPES_FOR_PRINT)
+    .subscribe { println it }
 
 
 
