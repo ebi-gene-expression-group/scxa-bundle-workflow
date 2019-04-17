@@ -451,7 +451,7 @@ process matrix_lines {
     echo -e "mtx_matrix_rows\t$expressionType/$matrixRows\t$expressionType"
     echo -e "mtx_matrix_cols\t$expressionType/$matrixCols\t$expressionType"
     echo -e "mtx_matrix_content\t$expressionType/$matrixContent\t$expressionType"
-    if [ "${tsvMatrix.getName}" != 'NOTSV' ]; then 
+    if [ "${tsvMatrix.name}" != 'NOTSV' ]; then 
         echo -e "tsv_matrix\t$expressionType/$tsvMatrix\t$expressionType"
     fi
     """
