@@ -331,6 +331,8 @@ RAW_MATRIX_FOR_MTX
 
 process repackage_matrices {
 
+    cache 'deep'
+
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
