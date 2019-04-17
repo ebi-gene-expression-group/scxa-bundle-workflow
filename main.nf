@@ -375,11 +375,9 @@ process cell_count {
         set stdout, file("out/${expresssionMatrix}") into MATRICES_FOR_TSV_WITH_COUNT
 
     """
-        zipdir=\$(unzip -qql ${expressionMatrix.getBaseName()}.zip | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
-        unzip ${expressionMatrix.getBaseName()}        
-    
-        zcat \${zipdir}/barcodes.tsv | wc
-
+        zipdir=\$(unzip -qql ${expressionMatrix} | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
+        unzip -p ${expressionMatrix} \${zipdir}/barcodes.tsv | wc       
+        
         mkdir -p out
         cp -p $expressionMatrix out/${expressionMatrix}
     """
