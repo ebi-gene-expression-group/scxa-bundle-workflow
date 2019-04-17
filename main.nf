@@ -365,9 +365,7 @@ RAW_MATRIX_FOR_TSV
         FOO    
     }
 
-FOO.subscribe {
-    println it.trim()
-}
+FOO.subscribe { println it }
 
 // Count the number of cells
 
