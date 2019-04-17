@@ -323,6 +323,7 @@ RAW_MATRIX_FOR_MTX
     .concat(RAW_FILTERED_MATRIX_FOR_MTX)
     .concat(NORMALISED_MATRIX_FOR_MTX)
     .concat(RAW_FILTERED_TPM_MATRIX_FOR_MTX)
+    .merge(EXPRESSION_TYPES_FOR_MTX)
     .set{
         MATRICES_TO_REPACKAGE
     }
@@ -332,8 +333,7 @@ process repackage_matrices {
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
-        file expressionMatrix from MATRICES_TO_REPACKAGE
-        val expressionType from EXPRESSION_TYPES_FOR_MTX
+        set file(expressionMatrix), val(expressionType) from MATRICES_TO_REPACKAGE
 
     output:
         set val(expressionType), file("${expressionType}/genes.tsv.gz") into MTX_MATRIX_ROWNAMES
@@ -364,6 +364,38 @@ RAW_MATRIX_FOR_TSV
         MATRICES_FOR_TSV
     }
 
+// Count the number of cells
+
+process cell_count {
+
+    input:
+        file(expressionMatrix) from MATRICES_FOR_TSV
+
+    output:
+        set stdout, file("out/${expresssionMatrix}") into MATRICES_FOR_TSV_WITH_COUNT
+
+    """
+        zipdir=\$(unzip -qql ${expressionMatrix.getBaseName()}.zip | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
+        unzip ${expressionMatrix.getBaseName()}        
+    
+        zcat \${zipdir}/barcodes.tsv | wc
+
+        mkdir -p out
+        cp -p $expressionMatrix out/${expressionMatrix}
+    """
+}
+
+// Only make TSVs for small enough matrices
+
+SMALL_MATRICES = Channel.create()
+BIG_MATRICES = Channel.create()
+
+MATRICES_FOR_TSV_WITH_COUNT
+    .merge( EXPRESSION_TYPES_FOR_TSV)
+    .choice( SMALL_MATRICES, BIG_MATRICES ) {a -> 
+    a[0] < params.largeMatrixThreshold ? 0 : 1
+}
+
 // Make tsv-format matrices
 
 process mtx_to_tsv {
@@ -377,8 +409,7 @@ process mtx_to_tsv {
     maxRetries 20
     
     input:
-        file expressionMatrix from MATRICES_FOR_TSV
-        val expressionType from EXPRESSION_TYPES_FOR_TSV
+        set val(cellCount), file(expressionMatrix), val(expressionType) from SMALL_MATRICES
         
     output:
         set val(expressionType), file("${expressionType}/${expressionType}.tsv") into TSV_MATRICES
@@ -399,12 +430,20 @@ process mtx_to_tsv {
     """
 }
 
+// Mark the big matrices as not having TSVs, but include them in the data
+// structure for the matrix_lines process
+
+BIG_MATRICES
+    .map{ row-> tuple( row[1], file('NOTSV')) }        
+    .concat( TSV_MATRICES)
+    .set { TSV_AND_NOTSV_MATRICES }
+
 // Make manifest lines for matrices
 
 process matrix_lines {
 
     input:
-        set val(expressionType), file(matrixRows), file(matrixCols), file(matrixContent), file(tsvMatrix) from MTX_MATRIX_ROWNAMES.join(MTX_MATRIX_COLNAMES).join(MTX_MATRIX_CONTENT).join(TSV_MATRICES)
+        set val(expressionType), file(matrixRows), file(matrixCols), file(matrixContent), file(tsvMatrix) from MTX_MATRIX_ROWNAMES.join(MTX_MATRIX_COLNAMES).join(MTX_MATRIX_CONTENT).join(TSV_AND_NOTSV_MATRICES)
 
     output:
         stdout MATRIX_MANIFEST_LINES 
@@ -413,7 +452,9 @@ process matrix_lines {
     echo -e "mtx_matrix_rows\t$expressionType/$matrixRows\t$expressionType"
     echo -e "mtx_matrix_cols\t$expressionType/$matrixCols\t$expressionType"
     echo -e "mtx_matrix_content\t$expressionType/$matrixContent\t$expressionType"
-    echo -e "tsv_matrix\t$expressionType/$tsvMatrix\t$expressionType"
+    if [ "${tsvMatrix.getName}" != 'NOTSV' ]; then 
+        echo -e "tsv_matrix\t$expressionType/$tsvMatrix\t$expressionType"
+    fi
     """
 }
 
