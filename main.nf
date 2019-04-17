@@ -319,10 +319,10 @@ RAW_FILTERED_TPM_MATRIX.into{
 // Collect a list of matrices to repackage 
 
 RAW_MATRIX_FOR_MTX
-    //.concat(RAW_TPM_MATRIX_FOR_MTX)
-    //.concat(RAW_FILTERED_MATRIX_FOR_MTX)
-    //.concat(NORMALISED_MATRIX_FOR_MTX)
-    //.concat(RAW_FILTERED_TPM_MATRIX_FOR_MTX)
+    .concat(RAW_TPM_MATRIX_FOR_MTX)
+    .concat(RAW_FILTERED_MATRIX_FOR_MTX)
+    .concat(NORMALISED_MATRIX_FOR_MTX)
+    .concat(RAW_FILTERED_TPM_MATRIX_FOR_MTX)
     .merge(EXPRESSION_TYPES_FOR_MTX)
     .set{
         MATRICES_TO_REPACKAGE
@@ -356,10 +356,10 @@ process repackage_matrices {
 // Collect a list of matrices to convert to tsv
 
 RAW_MATRIX_FOR_TSV
-    .concat(RAW_TPM_MATRIX_FOR_TSV)
-    .concat(RAW_FILTERED_MATRIX_FOR_TSV)
-    .concat(NORMALISED_MATRIX_FOR_TSV)
-    .concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
+    //.concat(RAW_TPM_MATRIX_FOR_TSV)
+    //.concat(RAW_FILTERED_MATRIX_FOR_TSV)
+    //.concat(NORMALISED_MATRIX_FOR_TSV)
+    //.concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
     .into{
         MATRICES_FOR_TSV
         FOO    
