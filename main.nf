@@ -393,7 +393,7 @@ BIG_MATRICES = Channel.create()
 
 MATRICES_FOR_TSV_WITH_COUNT
     .merge( EXPRESSION_TYPES_FOR_TSV)
-    .choice( SMALL_MATRICES, BIG_MATRICES ) {a -> a[0] < params.largeMatrixThreshold ? 0 : 1 }
+    .choice( SMALL_MATRICES, BIG_MATRICES ) {a -> a[0].toInteger() < params.largeMatrixThreshold ? 0 : 1 }
 
 // Make tsv-format matrices
 
