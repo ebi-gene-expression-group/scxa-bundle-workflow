@@ -432,7 +432,13 @@ process mtx_to_tsv {
 BIG_MATRICES
     .map{ row-> tuple( row[1], file('NOTSV')) }        
     .concat( TSV_MATRICES)
-    .set { TSV_AND_NOTSV_MATRICES }
+    .into { 
+        TSV_AND_NOTSV_MATRICES 
+        FOO
+    }
+
+FOO.subscribe { println it }
+
 
 // Make manifest lines for matrices
 
