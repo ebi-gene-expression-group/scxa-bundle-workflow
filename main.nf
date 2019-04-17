@@ -360,9 +360,14 @@ RAW_MATRIX_FOR_TSV
     .concat(RAW_FILTERED_MATRIX_FOR_TSV)
     .concat(NORMALISED_MATRIX_FOR_TSV)
     .concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
-    .set{
+    .into{
         MATRICES_FOR_TSV
+        FOO    
     }
+
+FOO.subscribe {
+    println it.trim()
+}
 
 // Count the number of cells
 
