@@ -357,9 +357,9 @@ process repackage_matrices {
 
 RAW_MATRIX_FOR_TSV
     .concat(RAW_TPM_MATRIX_FOR_TSV)
-    //.concat(RAW_FILTERED_MATRIX_FOR_TSV)
-    //.concat(NORMALISED_MATRIX_FOR_TSV)
-    //.concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
+    .concat(RAW_FILTERED_MATRIX_FOR_TSV)
+    .concat(NORMALISED_MATRIX_FOR_TSV)
+    .concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
     .into{
         MATRICES_FOR_TSV
         FOO    
