@@ -356,7 +356,7 @@ process repackage_matrices {
 // Collect a list of matrices to convert to tsv
 
 RAW_MATRIX_FOR_TSV
-    //.concat(RAW_TPM_MATRIX_FOR_TSV)
+    .concat(RAW_TPM_MATRIX_FOR_TSV)
     //.concat(RAW_FILTERED_MATRIX_FOR_TSV)
     //.concat(NORMALISED_MATRIX_FOR_TSV)
     //.concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
