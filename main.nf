@@ -372,7 +372,7 @@ process cell_count {
         file(expressionMatrix) from MATRICES_FOR_TSV
 
     output:
-        set stdout, file("out/${expresssionMatrix}") into MATRICES_FOR_TSV_WITH_COUNT
+        set stdout, file("out/${expressionMatrix}") into MATRICES_FOR_TSV_WITH_COUNT
 
     """
         zipdir=\$(unzip -qql ${expressionMatrix} | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
