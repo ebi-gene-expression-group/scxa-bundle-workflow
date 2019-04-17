@@ -376,7 +376,7 @@ process cell_count {
 
     """
         zipdir=\$(unzip -qql ${expressionMatrix} | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
-        unzip -p ${expressionMatrix} \${zipdir}/barcodes.tsv | wc       
+        unzip -p ${expressionMatrix} \${zipdir}/barcodes.tsv | wc -l      
         
         mkdir -p out
         cp -p $expressionMatrix out/${expressionMatrix}
