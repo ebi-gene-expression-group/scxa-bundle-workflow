@@ -387,8 +387,19 @@ process cell_count {
 
 SMALL_MATRICES = Channel.create()
 BIG_MATRICES = Channel.create()
-
+ 
 MATRICES_FOR_TSV_WITH_COUNT
+    .into{
+        BAR
+        PRINT
+    }
+
+PRINT.subscribe { println it }
+
+
+
+//MATRICES_FOR_TSV_WITH_COUNT
+BAR
     .merge( EXPRESSION_TYPES_FOR_TSV)
     .choice( SMALL_MATRICES, BIG_MATRICES ) {a -> a[0].toInteger() < params.largeMatrixThreshold ? 0 : 1 }
 
