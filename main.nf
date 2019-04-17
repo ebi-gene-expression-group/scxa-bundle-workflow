@@ -390,19 +390,6 @@ SMALL_MATRICES = Channel.create()
 BIG_MATRICES = Channel.create()
  
 MATRICES_FOR_TSV_WITH_COUNT
-    .into{
-        BAR
-        PRINT
-    }
-
-PRINT
-    .merge( EXPRESSION_TYPES_FOR_PRINT)
-    .subscribe { println it }
-
-
-
-//MATRICES_FOR_TSV_WITH_COUNT
-BAR
     .merge( EXPRESSION_TYPES_FOR_TSV)
     .choice( SMALL_MATRICES, BIG_MATRICES ) {a -> a[0].toInteger() < params.largeMatrixThreshold ? 0 : 1 }
 
@@ -444,15 +431,11 @@ process mtx_to_tsv {
 // structure for the matrix_lines process
 
 BIG_MATRICES
-    .map{ row-> tuple( row[1], file('NOTSV')) }        
+    .map{ row-> tuple( row[2], file('NOTSV')) }        
     .concat( TSV_MATRICES)
-    .into { 
+    .set { 
         TSV_AND_NOTSV_MATRICES 
-        FOO
     }
-
-FOO.subscribe { println it }
-
 
 // Make manifest lines for matrices
 
