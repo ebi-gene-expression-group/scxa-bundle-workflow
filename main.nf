@@ -297,8 +297,23 @@ process transform_clusters{
         #!/usr/bin/env Rscript
         
         clusters <- t(read.delim("$clustersFile", row.names=1))
-        resolutions <- sub('louvain_r', '', rownames(clusters))
-        clusters <- cbind(sel.resolution = as.character(resolutions == '1.0'), resolution = resolutions, clusters)
+
+        resolutions <- as.numeric(sub('louvain_r', '', rownames(clusters)))
+        ks <- apply(clusters, 1, function(x) length(unique(x)))
+        
+        # For any resolution values with the same K, pick the resolution closest to 1
+        
+        if ( length(unique(ks)) < length(ks)){
+          decide <- data.frame(res = resolutions, ks = ks, priority = abs(1-resolutions))
+          decide <- decide[order(decide\$priority),]
+          resolutions_to_use <- sort(decide\$res[match(unique(decide\$ks), decide\$ks)])
+          clusters <- clusters[resolutions %in% resolutions_to_use,]
+          ks <- ks[resolutions %in% resolutions_to_use]
+          resolutions <- resolutions[resolutions %in% resolutions_to_use]
+        }
+
+        clusters <- cbind(sel.K = as.character(resolutions == '1.0'), K = ks, clusters)
+
         write.table(clusters, file="clusters_for_bundle.txt", sep='\t', quote=FALSE, row.names= FALSE)
     """        
 }
