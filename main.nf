@@ -379,7 +379,7 @@ process cell_count {
 
     """
         zipdir=\$(unzip -qql ${expressionMatrix} | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
-        unzip -p ${expressionMatrix} \${zipdir}/barcodes.tsv | wc -l      
+        unzip -p ${expressionMatrix} \${zipdir}/barcodes.tsv | wc -l | | tr -d \'\\n\'  
         
         mkdir -p out
         cp -p $expressionMatrix out/${expressionMatrix}
@@ -393,9 +393,7 @@ BIG_MATRICES = Channel.create()
 
 MATRICES_FOR_TSV_WITH_COUNT
     .merge( EXPRESSION_TYPES_FOR_TSV)
-    .choice( SMALL_MATRICES, BIG_MATRICES ) {a -> 
-    a[0] < params.largeMatrixThreshold ? 0 : 1
-}
+    .choice( SMALL_MATRICES, BIG_MATRICES ) {a -> a[0] < params.largeMatrixThreshold ? 0 : 1 }
 
 // Make tsv-format matrices
 
