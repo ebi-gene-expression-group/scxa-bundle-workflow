@@ -187,13 +187,11 @@ if ( tertiaryWorkflow == 'scanpy-workflow'){
 
     process make_tertiary_software_report {
 
-        publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
-        
         output:
             file "${tertiaryWorfklow}.software.tsv" into TERTIARY_SOFTWARE
 
         """
-            generateSoftwareReport.sh ${tertiaryWorkflow} software.tsv
+            generateSoftwareReport.sh ${tertiaryWorkflow} ${tertiaryWorfklow}.software.tsv
         """
     }
 
@@ -207,7 +205,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow'){
 }
 
 SOFTWARE
-    .collectFile(name: 'software.tsv', storeDir: "$resultsRoot/bundle", keepHeader: true)
+    .collectFile(name: 'collected_software.tsv', storeDir: "$resultsRoot/bundle", keepHeader: true)
     .set{ MERGED_SOFTWARE }
 
 
@@ -221,12 +219,11 @@ process finalise_software {
         file(software) from MERGED_SOFTWARE
 
     output:
-        file('output/software.tsv') into SOFTWARE_FOR_MANIFEST
+        file('software.tsv') into SOFTWARE_FOR_MANIFEST
 
     """
-    mkdir -p output
-    head -n 1 $software > output/software.tsv
-    tail -n +2 $software | sort | uniq >> output/software.tsv
+    head -n 1 $software > software.tsv
+    tail -n +2 $software | sort | uniq >> software.tsv
     """
 }
 
