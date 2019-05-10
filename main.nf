@@ -274,49 +274,7 @@ process tsne_lines {
     """
 }
 
-// Transform the clusters into the format expected. Currently we need to change
-// matrix orientation, and insert a logical initial column pointing at the
-// default parameterisation (resolution = 1) 
-
-process transform_clusters{
-
-    conda 'r-base'
-    
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
-        
-    input:
-        file clustersFile from SCANPY_CLUSTERS
-
-    output:
-        file 'clusters_for_bundle.txt' into BUNDLE_CLUSTERS
-
-    """
-        #!/usr/bin/env Rscript
-        
-        clusters <- t(read.delim("$clustersFile", row.names=1))
-
-        resolutions <- as.numeric(sub('louvain_r', '', rownames(clusters)))
-        ks <- apply(clusters, 1, function(x) length(unique(x)))
-        
-        # For any resolution values with the same K, pick the resolution closest to 1
-        
-        if ( length(unique(ks)) < length(ks)){
-          decide <- data.frame(res = resolutions, ks = ks, priority = abs(1-resolutions))
-          decide <- decide[order(decide\$priority),]
-          resolutions_to_use <- sort(decide\$res[match(unique(decide\$ks), decide\$ks)])
-          clusters <- clusters[resolutions %in% resolutions_to_use,]
-          ks <- ks[resolutions %in% resolutions_to_use]
-          resolutions <- resolutions[resolutions %in% resolutions_to_use]
-        }
-
-        clusters <- cbind(sel.K = as.character(resolutions == '1.0'), K = ks, clusters)
-
-        write.table(clusters, file="clusters_for_bundle.txt", sep='\t', quote=FALSE, row.names= FALSE)
-    """        
-}
-
 // Repackage the matrices 
-
 
 Channel.from( 'raw', 'tpm', 'raw_filtered', 'normalised', 'tpm_filtered' ).into{
     EXPRESSION_TYPES_FOR_MTX
@@ -566,7 +524,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow'){
         input:
             file baseManifest from BASE_MANIFEST
             file tsne from TSNE_MANIFEST_CONTENT
-            file clusters from BUNDLE_CLUSTERS
+            file clusters from SCANPY_CLUSTERS
             file markers from MARKER_MANIFEST_CONTENT
 
         output:
