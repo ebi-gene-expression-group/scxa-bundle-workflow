@@ -196,7 +196,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 
         script:
 
-        if ( tertiaryWorkflow == 'scanpy-galaxy' )
+        if ( tertiaryWorkflow == 'scanpy-workflow' )
 
             """
                 generateSoftwareReport.sh ${tertiaryWorkflow} ${tertiaryWorkflow}.software.tsv
