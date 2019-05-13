@@ -11,8 +11,7 @@ if ( params.containsKey('tertiaryWorkflow' )){
     tertiaryWorkflow = params.tertiaryWorkflow
     if ( tertiaryWorkflow == 'scanpy-galaxy' ){
         tertiarySoftwareReport = "$resultsRoot/${params.tertiarySoftwareReport}"
-    }     
- 
+    }      
 }else{
     tertiaryWorkflow = 'none'
 }
@@ -22,7 +21,7 @@ RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists
 REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
 
-if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow = 'scanpy-galaxy'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
@@ -188,7 +187,7 @@ MASTER_SOFTWARE
     .collectFile(name: 'software.tsv', newLine: true, keepHeader: true )
     .set { ALL_BASE_SOFTWARE }
 
-if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow = 'scanpy-galaxy'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy'){
 
     process make_tertiary_software_report {
 
