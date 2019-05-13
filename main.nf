@@ -5,12 +5,12 @@ smartProtocols = [ 'smart-seq', 'smart-seq2', 'smarter', 'smart-like' ]
 
 resultsRoot = params.resultsRoot
 masterWorkflow = params.masterWorkflow
-scanpyGalaxySoftwareReport = 'None'
+tertiarySoftwareReport = 'None'
 
 if ( params.containsKey('tertiaryWorkflow' )){
     tertiaryWorkflow = params.tertiaryWorkflow
     if ( tertiaryWorkflow == 'scanpy-galaxy' ){
-        scanpyGalaxySoftwareReport = params.scanpyGalaxySoftwareReport
+        tertiarySoftwareReport = params.tertiarySoftwareReport
     }     
  
 }else{
@@ -205,7 +205,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow = 'scanpy-galaxy'
 
         else
             """
-               cp ${scanpyGalaxySoftwareReport} ${tertiaryWorfklow}.software.tsv
+               cp ${tertiarySoftwareReport} ${tertiaryWorfklow}.software.tsv
             """
     }
 
