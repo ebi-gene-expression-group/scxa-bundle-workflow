@@ -22,7 +22,7 @@ tail -n +2 $template | while read -r l; do
     package=$(echo "$l" | awk -F'\t' '{print $4}')
     citation=$(echo "$l" | awk -F'\t' '{print $5}')
 
-    environment_file=${NXF_ASSETS}/${NXF_ORG}/$subworkflow/envs/${environment}.yml
+    environment_file=$SCXA_WORKFLOW_ROOT/workflow/$subworkflow/envs/${environment}.yml
     if [ ! -e "$environment_file" ]; then
         echo "Environment file $environment_file not found" 1>&2
         exit 1
