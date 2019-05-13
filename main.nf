@@ -330,11 +330,14 @@ process repackage_matrices {
     """
         zipdir=\$(unzip -qql ${expressionMatrix.getBaseName()}.zip | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
         unzip ${expressionMatrix.getBaseName()}        
-    
-        mkdir -p ${expressionType}
-        mv \${zipdir}/matrix.mtx ${expressionType} && gzip ${expressionType}/matrix.mtx
-        mv \${zipdir}/genes.tsv ${expressionType} && gzip ${expressionType}/genes.tsv
-        mv \${zipdir}/barcodes.tsv ${expressionType} && gzip ${expressionType}/barcodes.tsv
+   
+        if [ "\$zipdir" != ${expressionType} ]; then
+            ln -s \$zipdir ${expressionType}            
+        fi
+ 
+        gzip ${expressionType}/matrix.mtx
+        gzip ${expressionType}/genes.tsv
+        gzip ${expressionType}/barcodes.tsv
     """        
 
 }
