@@ -5,9 +5,14 @@ smartProtocols = [ 'smart-seq', 'smart-seq2', 'smarter', 'smart-like' ]
 
 resultsRoot = params.resultsRoot
 masterWorkflow = params.masterWorkflow
+scanpyGalaxySoftwareReport = 'None'
 
 if ( params.containsKey('tertiaryWorkflow' )){
     tertiaryWorkflow = params.tertiaryWorkflow
+    if ( tertiaryWorkflow == 'scanpy-galaxy' ){
+        scanpyGalaxySoftwareReport = params.scanpyGalaxySoftwareReport
+    }     
+ 
 }else{
     tertiaryWorkflow = 'none'
 }
@@ -17,7 +22,7 @@ RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists
 REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
 
-if ( tertiaryWorkflow == 'scanpy-workflow'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow = 'scanpy-galaxy'){
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
@@ -160,9 +165,9 @@ process make_base_software_report {
     script:
 
         if ( dropletProtocols.contains(protocol) ) {
-            baseWorkflow = 'scxa-droplet-quantification-workflow'
+            baseWorkflow = 'scxa-workflows/w_droplet_quantification'
         } else if ( smartProtocols.contains(protocol) ) {
-            baseWorkflow = 'scxa-smartseq-quantification-workflow'
+            baseWorkflow = 'scxa-workflows/w_smart-seq_quantification'
         } else {
             baseWorkflow = ''
         }
@@ -183,16 +188,25 @@ MASTER_SOFTWARE
     .collectFile(name: 'software.tsv', newLine: true, keepHeader: true )
     .set { ALL_BASE_SOFTWARE }
 
-if ( tertiaryWorkflow == 'scanpy-workflow'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow = 'scanpy-galaxy'){
 
     process make_tertiary_software_report {
 
         output:
             file "${tertiaryWorfklow}.software.tsv" into TERTIARY_SOFTWARE
 
-        """
-            generateSoftwareReport.sh ${tertiaryWorkflow} ${tertiaryWorfklow}.software.tsv
-        """
+        script:
+
+        if ( tertiaryWorkflow == 'scanpy-galaxy' )
+
+            """
+                generateSoftwareReport.sh ${tertiaryWorkflow} ${tertiaryWorfklow}.software.tsv
+            """
+
+        else
+            """
+               cp ${scanpyGalaxySoftwareReport} ${tertiaryWorfklow}.software.tsv
+            """
     }
 
     ALL_BASE_SOFTWARE

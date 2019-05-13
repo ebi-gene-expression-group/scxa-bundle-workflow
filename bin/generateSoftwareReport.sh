@@ -3,7 +3,7 @@
 subworkflow=$1
 outfile=$2
 
-template=${NXF_ASSETS}/${NXF_ORG}/$subworkflow/conf/software.tsv
+template=$SCXA_WORKFLOW_ROOT/workflow/scxa-workflows/$subworkflow/conf/software.tsv
 
 if [ ! -e "$template" ]; then
     echo "Software versions file $template does not exist" 1>&2
