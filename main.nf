@@ -10,7 +10,7 @@ tertiarySoftwareReport = 'None'
 if ( params.containsKey('tertiaryWorkflow' )){
     tertiaryWorkflow = params.tertiaryWorkflow
     if ( tertiaryWorkflow == 'scanpy-galaxy' ){
-        tertiarySoftwareReport = params.tertiarySoftwareReport
+        tertiarySoftwareReport = "$resultsRoot/${params.tertiarySoftwareReport}"
     }     
  
 }else{
