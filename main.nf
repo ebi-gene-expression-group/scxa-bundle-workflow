@@ -531,7 +531,7 @@ process base_manifest {
 // Add in any tertiary data to the bundle. If there's no teriary data, just
 // copy the base manifest
 
-if ( tertiaryWorkflow == 'scanpy-workflow'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy'){
 
     process tertiary_manifest {
 
