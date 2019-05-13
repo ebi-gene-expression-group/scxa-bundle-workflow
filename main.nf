@@ -289,7 +289,7 @@ process tsne_lines {
 
 // Repackage the matrices 
 
-Channel.from( 'raw', 'tpm', 'raw_filtered', 'normalised', 'tpm_filtered' ).into{
+Channel.from( 'raw', 'tpm', 'raw_filtered', 'filtered_normalised', 'tpm_filtered' ).into{
     EXPRESSION_TYPES_FOR_MTX
     EXPRESSION_TYPES_FOR_TSV
     EXPRESSION_TYPES_FOR_PRINT
