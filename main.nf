@@ -192,19 +192,19 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     process make_tertiary_software_report {
 
         output:
-            file "${tertiaryWorfklow}.software.tsv" into TERTIARY_SOFTWARE
+            file "${tertiaryWorkflow}.software.tsv" into TERTIARY_SOFTWARE
 
         script:
 
         if ( tertiaryWorkflow == 'scanpy-galaxy' )
 
             """
-                generateSoftwareReport.sh ${tertiaryWorkflow} ${tertiaryWorfklow}.software.tsv
+                generateSoftwareReport.sh ${tertiaryWorkflow} ${tertiaryWorkflow}.software.tsv
             """
 
         else
             """
-               cp ${tertiarySoftwareReport} ${tertiaryWorfklow}.software.tsv
+               cp ${tertiarySoftwareReport} ${tertiaryWorkflow}.software.tsv
             """
     }
 
