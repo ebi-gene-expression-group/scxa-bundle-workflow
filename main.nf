@@ -218,7 +218,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 }
 
 SOFTWARE
-    .collectFile(name: 'collected_software.tsv', storeDir: "$resultsRoot/bundle", keepHeader: true)
+    .collectFile(name: 'collected_software.tsv', storeDir: "$resultsRoot/bundle", keepHeader: true, newLine: false)
     .set{ MERGED_SOFTWARE }
 
 
