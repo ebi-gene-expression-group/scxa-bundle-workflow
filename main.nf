@@ -2,6 +2,7 @@
 
 dropletProtocols = [ '10xv1', '10xv1a', '10xv1i', '10xv2', 'drop-seq' ]
 smartProtocols = [ 'smart-seq', 'smart-seq2', 'smarter', 'smart-like' ]
+expressionTypes = [ 'raw' ]
 
 resultsRoot = params.resultsRoot
 masterWorkflow = params.masterWorkflow
@@ -21,7 +22,10 @@ RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists
 REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
 
+
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
+    expressionTypes = expressiontypes + [ 'raw_filtered', 'filtered_normalised' ]
+
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
@@ -38,6 +42,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 
 if ( params.containsKey('tpmMatrix') ){
     RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfExists: true)
+    expressionTypes = expressionTypes + [ 'tpm', 'tpm_filtered' ]
 }else{
     RAW_TPM_MATRIX = Channel.empty()
 }
@@ -299,10 +304,9 @@ process tsne_lines {
 
 // Repackage the matrices 
 
-Channel.from( 'raw', 'tpm', 'raw_filtered', 'filtered_normalised', 'tpm_filtered' ).into{
+Channel.from( expressionTypes ).into{
     EXPRESSION_TYPES_FOR_MTX
     EXPRESSION_TYPES_FOR_TSV
-    EXPRESSION_TYPES_FOR_PRINT
 }
 
 RAW_FILTERED_TPM_MATRIX.into{
@@ -313,9 +317,9 @@ RAW_FILTERED_TPM_MATRIX.into{
 // Collect a list of matrices to repackage 
 
 RAW_MATRIX_FOR_MTX
-    .concat(RAW_TPM_MATRIX_FOR_MTX)
     .concat(RAW_FILTERED_MATRIX_FOR_MTX)
     .concat(NORMALISED_MATRIX_FOR_MTX)
+    .concat(RAW_TPM_MATRIX_FOR_MTX)
     .concat(RAW_FILTERED_TPM_MATRIX_FOR_MTX)
     .merge(EXPRESSION_TYPES_FOR_MTX)
     .set{
@@ -355,10 +359,11 @@ process repackage_matrices {
 // Collect a list of matrices to convert to tsv
 
 RAW_MATRIX_FOR_TSV
-    .concat(RAW_TPM_MATRIX_FOR_TSV)
     .concat(RAW_FILTERED_MATRIX_FOR_TSV)
     .concat(NORMALISED_MATRIX_FOR_TSV)
+    .concat(RAW_TPM_MATRIX_FOR_TSV)
     .concat(RAW_FILTERED_TPM_MATRIX_FOR_TSV)
+    .merge( EXPRESSION_TYPES_FOR_TSV)
     .set{
         MATRICES_FOR_TSV
     }
@@ -368,10 +373,10 @@ RAW_MATRIX_FOR_TSV
 process cell_count {
 
     input:
-        file(expressionMatrix) from MATRICES_FOR_TSV
+        set file(expressionMatrix), val(expressionType) from MATRICES_FOR_TSV
 
     output:
-        set stdout, file("out/${expressionMatrix}") into MATRICES_FOR_TSV_WITH_COUNT
+        set stdout, file("out/${expressionMatrix}"), val(expressionType) into MATRICES_FOR_TSV_WITH_COUNT
 
     """
         zipdir=\$(unzip -qql ${expressionMatrix} | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
@@ -388,7 +393,6 @@ SMALL_MATRICES = Channel.create()
 BIG_MATRICES = Channel.create()
  
 MATRICES_FOR_TSV_WITH_COUNT
-    .merge( EXPRESSION_TYPES_FOR_TSV)
     .choice( SMALL_MATRICES, BIG_MATRICES ) {a -> a[0].toInteger() < params.largeMatrixThreshold ? 0 : 1 }
 
 // Make tsv-format matrices
