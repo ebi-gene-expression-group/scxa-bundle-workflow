@@ -243,7 +243,7 @@ process finalise_software {
     pushd $SCXA_WORKFLOW_ROOT/workflow/scxa-workflows > /dev/null
     current_sha=\$(git rev-parse --short HEAD)
     popd > /dev/null
-    echo -e "Configuration\tscxa-workflows\t$current_sha\thttps://github.com/ebi-gene-expression-group/scxa-workflows" >> software.tsv
+    echo -e "Configuration\tscxa-workflows\t\$current_sha\thttps://github.com/ebi-gene-expression-group/scxa-workflows" >> software.tsv
 
     # Remove any empty lines
     sed -i '/^\$/d' software.tsv
