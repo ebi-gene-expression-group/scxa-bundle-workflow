@@ -24,7 +24,7 @@ REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true 
 
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
-    expressionTypes = expressiontypes + [ 'raw_filtered', 'filtered_normalised' ]
+    expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
 
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
