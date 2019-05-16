@@ -246,7 +246,7 @@ process finalise_software {
     echo -e "Configuration\tscxa-workflows\t$current_sha\thttps://github.com/ebi-gene-expression-group/scxa-workflows" >> software.tsv
 
     # Remove any empty lines
-    sed -i '/^$/d' software.tsv
+    sed -i '/^\$/d' software.tsv
     """
 }
 
