@@ -218,7 +218,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 }
 
 SOFTWARE
-    .collectFile(name: 'collected_software.tsv', storeDir: "$resultsRoot/bundle", keepHeader: true, newLine: false)
+    .collectFile(name: 'collected_software.tsv', keepHeader: true, newLine: false)
     .set{ MERGED_SOFTWARE }
 
 
@@ -237,6 +237,7 @@ process finalise_software {
     """
     head -n 1 $software > software.tsv
     tail -n +2 $software | sort | uniq >> software.tsv
+    sed -i '/^$/d' software.tsv
     """
 }
 
