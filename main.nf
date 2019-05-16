@@ -237,6 +237,15 @@ process finalise_software {
     """
     head -n 1 $software > software.tsv
     tail -n +2 $software | sort | uniq >> software.tsv
+
+    # Fetch the current SHA of the config repo, for reproducibility
+
+    pushd $SCXA_WORKFLOW_ROOT/workflow/scxa-workflows > /dev/null
+    current_sha=$(git rev-parse --short HEAD)
+    popd > /dev/null
+    echo -e "Configuration\tscxa-workflows\t$current_sha\thttps://github.com/ebi-gene-expression-group/scxa-workflows" >> software.tsv
+
+    # Remove any empty lines
     sed -i '/^$/d' software.tsv
     """
 }
