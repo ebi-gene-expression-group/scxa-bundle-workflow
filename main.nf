@@ -555,6 +555,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 
         output:
             file "MANIFEST"
+            file(clusters)
 
         """
             cp $baseManifest MANIFEST
