@@ -459,6 +459,29 @@ process matrix_lines {
     """
 }
 
+// Renumber clusters where numbering starts at 0
+
+process renumber_clusters {
+
+    input:
+        file 'possibly_misnumbered_clusters.txt' from SCANPY_CLUSTERS
+    
+    output:
+        file 'clusters_for_bundle.txt' into FINAL_CLUSTERS
+
+    """
+        #!/usr/bin/env Rscript
+
+        clusters <- read.delim('possibly_misnumbered_clusters.txt')
+
+        if (min(clusters[,c(-1,-2)]) == 0){
+            clusters[,c(-1,-2)] <- clusters[,c(-1,-2)]+1
+        }
+
+        write.table(clusters, file='clusters_for_bundle.txt', sep="\t", quote=FALSE)
+    """
+}
+
 // Find out what resolutions are represented by the marker files
 
 process mark_marker_resolutions {
@@ -554,7 +577,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
         input:
             file baseManifest from BASE_MANIFEST
             file tsne from TSNE_MANIFEST_CONTENT
-            file clusters from SCANPY_CLUSTERS
+            file clusters from FINAL_CLUSTERS
             file markers from MARKER_MANIFEST_CONTENT
 
         output:
