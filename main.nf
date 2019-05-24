@@ -17,11 +17,29 @@ if ( params.containsKey('tertiaryWorkflow' )){
     tertiaryWorkflow = 'none'
 }
 
-PROTOCOL_LIST = Channel.from(params.protocolList.split(','))
+// Test protocols
+
+protocolList = params.protocolList.split(',')
+isDroplet = protocolList.any { dropletProtocols.contains( it ) }
+isSmart = protocolList.any { smartProtocols.contains( it ) }
+
+if (isDroplet && isSmart){
+    println("Error: Protocol list ${params.protocolList} for this experiment contains both droplet and smart protocols.")
+    System.exit(1)
+}else if(isDroplet){
+    println("Droplet experiment from ${params.protocolList}")
+}else if (isSmart){
+    println("Smart experiment from ${params.protocolList}")
+}else{
+    println("Cannot determine experiment type for ${params.protocolList}")
+    System.exit(1)
+}
+
+// See what other inputs are provided
+
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
 REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
-
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
@@ -160,15 +178,12 @@ process master_workflow_software {
 
 process make_base_software_report {
 
-    input:
-        val(protocol) from PROTOCOL_LIST 
-
     output:
-        file "${protocol}.software.tsv" into BASE_SOFTWARE
+        file "base.software.tsv" into BASE_SOFTWARE
 
     script:
 
-        if ( dropletProtocols.contains(protocol) ) {
+        if ( isDroplet ) {
             baseWorkflow = 'scxa-workflows/w_droplet_quantification'
         } else if ( smartProtocols.contains(protocol) ) {
             baseWorkflow = 'scxa-workflows/w_smart-seq_quantification'
@@ -178,12 +193,7 @@ process make_base_software_report {
     
 
     """
-        if [ -z "$baseWorkflow" ]; then
-            echo "I don't know what workflow would have been used for $protocol" 1>&2
-            exit 1
-        fi
-
-        generateSoftwareReport.sh ${baseWorkflow} ${protocol}.software.tsv
+        generateSoftwareReport.sh ${baseWorkflow} base.software.tsv
     """
 }
 
@@ -356,6 +366,44 @@ process repackage_matrices {
 
 }
 
+// Make cell - library mappings for droplet experiments 
+
+MTX_MATRIX_COLNAMES
+    .into{
+        MTX_MATRIX_COLNAMES_FOR_MANIFEST_LINES
+        MTX_MATRIX_COLNAMES_FOR_CELLMAPPING
+    }
+
+process cell_library_mappings {
+
+    publishDir "$resultsRoot/bundle/$expressionType"
+
+    input:
+        set val(expressionType), file(barcodesFile) from MTX_MATRIX_COLNAMES_FOR_CELLMAPPING
+
+    output:
+        set val(expressionType), file('cell_to_library.txt') optional true
+
+    script:
+
+        def sampleField = params.fields.run
+        if ( params.fields.containsKey('techrep') ){
+            sampleField = params.fields.techrep
+        }
+
+    """
+        if [ "$isDroplet" = 'true' ]; then
+            echo "# $sampleField" > cell_to_library.txt
+
+            zcat $barcodesFile | while read -r b; do 
+                barcode=\${b##*-} 
+                run=\${b/-\$barcode/''}
+                echo -e "\$b\t\$run" 
+            done >> cell_to_library.txt
+        fi
+    """
+}
+
 // Collect a list of matrices to convert to tsv
 
 RAW_MATRIX_FOR_TSV
@@ -444,7 +492,7 @@ BIG_MATRICES
 process matrix_lines {
 
     input:
-        set val(expressionType), file(matrixRows), file(matrixCols), file(matrixContent), file(tsvMatrix) from MTX_MATRIX_ROWNAMES.join(MTX_MATRIX_COLNAMES).join(MTX_MATRIX_CONTENT).join(TSV_AND_NOTSV_MATRICES)
+        set val(expressionType), file(matrixRows), file(matrixCols), file(matrixContent), file(tsvMatrix) from MTX_MATRIX_ROWNAMES.join(MTX_MATRIX_COLNAMES_FOR_MANIFEST_LINES).join(MTX_MATRIX_CONTENT).join(TSV_AND_NOTSV_MATRICES)
 
     output:
         stdout MATRIX_MANIFEST_LINES 
@@ -472,13 +520,13 @@ process renumber_clusters {
     """
         #!/usr/bin/env Rscript
 
-        clusters <- read.delim('possibly_misnumbered_clusters.txt')
+        clusters <- read.delim('possibly_misnumbered_clusters.txt', check.names=FALSE)
 
         if (min(clusters[,c(-1,-2)]) == 0){
             clusters[,c(-1,-2)] <- clusters[,c(-1,-2)]+1
         }
 
-        write.table(clusters, file='clusters_for_bundle.txt', sep="\t", quote=FALSE)
+        write.table(clusters, file='clusters_for_bundle.txt', sep="\t", quote=FALSE, row.names = FALSE)
     """
 }
 
