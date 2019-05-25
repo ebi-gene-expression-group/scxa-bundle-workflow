@@ -401,6 +401,7 @@ process cell_library_mappings {
                 echo -e "\$b\t\$run" 
             done >> cell_to_library.txt
         fi
+        exit 1
     """
 }
 
