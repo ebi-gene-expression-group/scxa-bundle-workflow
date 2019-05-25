@@ -340,7 +340,7 @@ process repackage_matrices {
 
     cache 'deep'
 
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
     input:
         set file(expressionMatrix), val(expressionType) from MATRICES_TO_REPACKAGE
@@ -376,7 +376,7 @@ MTX_MATRIX_COLNAMES
 
 process cell_library_mappings {
 
-    publishDir "$resultsRoot/bundle/$expressionType"
+    publishDir "$resultsRoot/bundle/$expressionType", mode: 'move'
 
     input:
         set val(expressionType), file(barcodesFile) from MTX_MATRIX_COLNAMES_FOR_CELLMAPPING
@@ -401,7 +401,6 @@ process cell_library_mappings {
                 echo -e "\$b\t\$run" 
             done >> cell_to_library.txt
         fi
-        exit 1
     """
 }
 
