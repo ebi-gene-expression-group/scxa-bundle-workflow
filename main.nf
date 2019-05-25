@@ -185,7 +185,7 @@ process make_base_software_report {
 
         if ( isDroplet ) {
             baseWorkflow = 'scxa-workflows/w_droplet_quantification'
-        } else if ( smartProtocols.contains(protocol) ) {
+        } else if ( isSmart ) {
             baseWorkflow = 'scxa-workflows/w_smart-seq_quantification'
         } else {
             baseWorkflow = ''
