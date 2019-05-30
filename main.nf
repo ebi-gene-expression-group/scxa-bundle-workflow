@@ -558,7 +558,15 @@ process markers_to_tsv {
         set val(resolution), file("markers_*.tsv") into TSV_MARKERS
 
     """
-    cat $markersFile | sed 's/,/\t/g' > markers_${resolution}.tsv
+    #!/usr/bin/env Rscript
+
+    markers <- read.csv('${markersFile}', check.names = FALSE)
+
+    if (min(markers\$groups) == 0){
+        markers\$groups <- markers\$groups + 1
+    }
+
+    write.table(markers, file='markers_${resolution}.tsv', sep="\t", quote=FALSE, row.names=FALSE)
     """
 }
 
