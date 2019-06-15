@@ -510,6 +510,10 @@ process matrix_lines {
 // Renumber clusters where numbering starts at 0
 
 process renumber_clusters {
+    
+    memory { 5.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
+    maxRetries 20
 
     input:
         file 'possibly_misnumbered_clusters.txt' from SCANPY_CLUSTERS
