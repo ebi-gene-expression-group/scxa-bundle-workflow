@@ -622,27 +622,29 @@ process base_manifest {
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy'){
 
+
+    BASE_MANIFEST
+        .concat(TSNE_MANIFEST_CONTENT)
+        .concat(MARKER_MANIFEST_CONTENT)
+        .collectFile(name: 'manifest_lines.tsv', newLine: false, sort: 'index' )
+        .set { STARTING_MANIFEST }
+
     process tertiary_manifest {
 
         publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
         
         input:
-            file baseManifest from BASE_MANIFEST
-            file tsne from TSNE_MANIFEST_CONTENT
+            file startingManifest from STARTING_MANIFEST
             file clusters from FINAL_CLUSTERS
-            file markers from MARKER_MANIFEST_CONTENT
 
         output:
             file "MANIFEST"
             file(clusters)
 
         """
-            cp $baseManifest MANIFEST
-            cat ${tsne} >> MANIFEST
-            cat ${markers} >> MANIFEST
+            cp $startingManifest MANIFEST
             echo -e "cluster_memberships\t${clusters}" >> MANIFEST
         """
-
     }
 
 }else{
