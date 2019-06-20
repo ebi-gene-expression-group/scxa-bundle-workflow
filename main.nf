@@ -547,9 +547,13 @@ process mark_marker_resolutions {
 
 // Convert the marker files to tsv
 
-process markers_to_tsv {
+process renumber_markers_to_tsv {
     
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+
+    memory { 5.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
+    maxRetries 20
     
     input:
         set val(resolution), file(markersFile) from MARKERS_BY_RESOLUTION
