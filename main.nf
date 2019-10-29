@@ -142,7 +142,7 @@ process reference_supplementary_lines {
 
     """
     ensembl_version=\$(echo $referenceGtf | cut -d '.' -f 3)
-    echo -e "Reference\tEnsembl\t\$ensembl_version\t$referenceFasta, $referenceGTF" > software_reference.tsv
+    echo -e "Reference\tEnsembl\t\$ensembl_version\t$referenceFasta, $referenceGtf" > software_reference.tsv
     """
 }
 
