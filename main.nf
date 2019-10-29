@@ -117,13 +117,13 @@ process publish_reference {
         file(referenceGtf) from REFERENCE_GTF
 
     output:
-        file("out/$referenceFasta")
-        file("out/$referenceGtf")
+        file("reference/$referenceFasta")
+        file("reference/$referenceGtf")
         
     """
-    mkdir -p out
-    cp -P $referenceFasta out
-    cp -P $referenceGtf out
+    mkdir -p reference
+    cp -P $referenceFasta reference
+    cp -P $referenceGtf reference
     """
 }
 
@@ -142,7 +142,8 @@ process reference_supplementary_lines {
 
     """
     ensembl_version=\$(echo $referenceGtf | cut -d '.' -f 3)
-    echo -e "Reference\tEnsembl\t\$ensembl_version\t$referenceFasta, $referenceGtf" > software_reference.tsv
+    echo "Analysis\tSoftware\tVersion\tCitation" > software_reference.tsv
+    echo -e "Reference\tEnsembl\t\$ensembl_version\t$referenceFasta, $referenceGtf" >> software_reference.tsv
     """
 }
 
