@@ -38,8 +38,8 @@ if (isDroplet && isSmart){
 // See what other inputs are provided
 
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
-REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true )
-REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true )
+REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true ).first()
+REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true ).first()
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
@@ -91,7 +91,7 @@ RAW_TPM_MATRIX.into{
 
 // Make manifest lines for references
 
-process reference_lines {
+process reference_manifest_lines {
 
     input:
         file(referenceFasta) from REFERENCE_FASTA
@@ -103,6 +103,47 @@ process reference_lines {
     """
     echo -e "reference_transcriptome\t$referenceFasta\t"
     echo -e "reference_annotation\t$referenceGtf\t"
+    """
+}
+
+// Publish reference files to bundle
+
+process publish_reference {
+    
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    
+    input:
+        file(referenceFasta) from REFERENCE_FASTA
+        file(referenceGtf) from REFERENCE_GTF
+
+    output:
+        file("reference/$referenceFasta")
+        file("reference/$referenceGtf")
+        
+    """
+    mkdir -p reference
+    cp -P $referenceFasta reference
+    cp -P $referenceGtf reference
+    """
+}
+
+// Reference lines for supplementary/ software table. Putting these data there
+// is a bit of a hack until we figure out better ways of flagging the reference
+// used
+
+process reference_supplementary_lines {
+
+    input:
+        file(referenceFasta) from REFERENCE_FASTA
+        file(referenceGtf) from REFERENCE_GTF
+
+    output:
+        file("software_reference.tsv") into REFERENCE_SOFTWARE 
+
+    """
+    ensembl_version=\$(echo $referenceGtf | cut -d '.' -f 3)
+    echo "Analysis\tSoftware\tVersion\tCitation" > software_reference.tsv
+    echo -e "Reference\tEnsembl\t\$ensembl_version\t$referenceFasta, $referenceGtf" >> software_reference.tsv
     """
 }
 
@@ -199,6 +240,7 @@ process make_base_software_report {
 
 MASTER_SOFTWARE
     .concat(BASE_SOFTWARE)
+    .concat(REFERENCE_SOFTWARE)
     .collectFile(name: 'software.tsv', newLine: true, keepHeader: true )
     .set { ALL_BASE_SOFTWARE }
 
