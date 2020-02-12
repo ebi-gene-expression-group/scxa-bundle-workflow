@@ -38,8 +38,8 @@ if (isDroplet && isSmart){
 // See what other inputs are provided
 
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
-REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true ).first()
-REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true ).first()
+REFERENCE_FASTA = Channel.fromPath( "$resultsRoot/${params.referenceFasta}", checkIfExists: true ).first()
+REFERENCE_GTF = Channel.fromPath( "$resultsRoot/${params.referenceGtf}", checkIfExists: true ).first()
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
