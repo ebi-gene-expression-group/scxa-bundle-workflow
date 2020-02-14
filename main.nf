@@ -612,10 +612,9 @@ process renumber_markers_to_tsv {
 
     markers <- read.csv('${markersFile}', check.names = FALSE)
 
-    if (min(markers\$groups) == 0){
+    if ('groups' %in% names(markers) && min(markers\$groups) == 0){
         markers\$groups <- markers\$groups + 1
-    }
-    if (min(markers\$cluster) == 0){
+    }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
         markers\$cluster <- markers\$cluster + 1
     }
 
