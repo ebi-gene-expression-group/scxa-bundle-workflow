@@ -624,9 +624,6 @@ process renumber_markers {
     }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
         markers\$cluster <- markers\$cluster + 1
     }
-    if (min(markers\$cluster) == 0){
-        markers\$cluster <- markers\$cluster + 1
-    }
 
     write.table(markers, file='markers_${resolution}.tsv', sep="\t", quote=FALSE, row.names=FALSE)
     """
