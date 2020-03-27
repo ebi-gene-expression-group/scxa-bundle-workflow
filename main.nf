@@ -48,7 +48,9 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
     SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.csv", checkIfExists: true )
-    SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv" )
+    SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv" )
+    SCANPY_CELLTYPE_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/celltype_markers_*.csv" )
+    SCANPY_MARKERS=SCANPY_CLUSTER_MARKERS.concat(SCANPY_CELLTYPE_MARKERS)
 }else{
     RAW_FILTERED_MATRIX = Channel.empty()
     NORMALISED_MATRIX = Channel.empty()
@@ -594,7 +596,11 @@ process mark_marker_resolutions {
         set stdout, file (markersFile) into MARKERS_BY_RESOLUTION 
 
     """
-       echo $markersFile | grep -o -E '[0-9]+' | tr -d \'\\n\' 
+        if [ $markersFile = 'celltype_markers.csv' ] ]; then
+            echo -n "N/A"
+        else
+            echo $markersFile | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
+        fi
     """
 }
 
@@ -612,20 +618,22 @@ process renumber_markers {
         set val(resolution), file('markers.tsv') from MARKERS_BY_RESOLUTION
 
     output:
-        set val(resolution), file("markers_${resolution}.tsv") into TSV_MARKERS
+        set val(resolution), file("${markersFile.baseName}.tsv") into TSV_MARKERS
 
     """
     #!/usr/bin/env Rscript
 
     markers <- read.delim('markers.tsv', check.names = FALSE)
 
-    if ('groups' %in% names(markers) && min(markers\$groups) == 0){
-        markers\$groups <- markers\$groups + 1
-    }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
-        markers\$cluster <- markers\$cluster + 1
+    if ( $resolution != 'N/A' ){
+        if ('groups' %in% names(markers) && min(markers\$groups) == 0){
+            markers\$groups <- markers\$groups + 1
+        }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
+            markers\$cluster <- markers\$cluster + 1
+        }
     }
 
-    write.table(markers, file='markers_${resolution}.tsv', sep="\t", quote=FALSE, row.names=FALSE)
+    write.table(markers, file='${markersFile.baseName}.tsv', sep="\t", quote=FALSE, row.names=FALSE)
     """
 }
 
