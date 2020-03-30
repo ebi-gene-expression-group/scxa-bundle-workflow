@@ -49,8 +49,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
     SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.csv", checkIfExists: true )
     SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv" )
-    SCANPY_CELLTYPE_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/celltype_markers.csv" )
-    SCANPY_MARKERS=SCANPY_CLUSTER_MARKERS.concat(SCANPY_CELLTYPE_MARKERS)
+    SCANPY_META_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/*_markers.csv" )
 }else{
     RAW_FILTERED_MATRIX = Channel.empty()
     NORMALISED_MATRIX = Channel.empty()
@@ -583,23 +582,34 @@ process renumber_clusters {
 process mark_marker_resolutions {
 
     input:
-        file markersFile from SCANPY_MARKERS
+        file markersFile from SCANPY_CLUSTER_MARKERS
 
     output:
-        set stdout, file (markersFile) into MARKERS_BY_RESOLUTION 
+        stdout, file (markersFile) into CLUSTER_MARKERS_BY_RESOLUTION 
 
     """
-        if [ $markersFile = 'celltype_markers.csv' ]; then
-            echo -n "N/A"
-        else
-            echo $markersFile | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
-        fi
+        echo $markersFile | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
+    """
+}
+
+// Find out what resolutions are represented by the marker files
+
+process mark_marker_meta {
+
+    input:
+        file markersFile from SCANPY_META_MARKERS
+
+    output:
+        set val('meta_markers'), stdout, file (markersFile) into META_MARKERS_BY_VAR 
+
+    """
+        echo "$markersFile" | rev | cut -d"_" -f2-  | rev
     """
 }
 
 // Convert the marker files to tsv
 
-process renumber_markers_to_tsv {
+process renumber_cluster_markers_to_tsv {
     
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
 
@@ -608,24 +618,39 @@ process renumber_markers_to_tsv {
     maxRetries 20
     
     input:
-        set val(resolution), file(markersFile) from MARKERS_BY_RESOLUTION
+        set val(resolution), file(markersFile) from CLUSTER_MARKERS_BY_RESOLUTION
 
     output:
-        set val(resolution), file("${markersFile.baseName}.tsv") into TSV_MARKERS
+        set set val('cluster_markers'), val(resolution), file("out/${markersFile.baseName}") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
 
     """
     #!/usr/bin/env Rscript
 
     markers <- read.csv('${markersFile}', check.names = FALSE)
 
-    if ( "$resolution" != 'N/A' ){
-        if ('groups' %in% names(markers) && min(markers\$groups) == 0){
-            markers\$groups <- markers\$groups + 1
-        }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
-            markers\$cluster <- markers\$cluster + 1
-        }
+    if ('groups' %in% names(markers) && min(markers\$groups) == 0){
+        markers\$groups <- markers\$groups + 1
+    }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
+        markers\$cluster <- markers\$cluster + 1
     }
+    dir.create('out')
+    write.csv(markers, file='out/${markersFile.baseName}.csv', sep="\t", quote=FALSE, row.names=FALSE)
+    """
+}
 
+process markers_to_tsv {
+    
+    input:
+        set val(markerType), val(markerVal), file(markersFile) from RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR)
+
+    output:
+        set val(markerType), val(markerVal), file("${markersFile.baseName}.tsv") into TSV_MARKERS
+        
+
+    """
+    #!/usr/bin/env Rscript
+
+    markers <- read.csv('${markersFile}', check.names = FALSE)
     write.table(markers, file='${markersFile.baseName}.tsv', sep="\t", quote=FALSE, row.names=FALSE)
     """
 }
@@ -635,13 +660,13 @@ process renumber_markers_to_tsv {
 process markers_lines {
 
     input:
-        set val(resolution), file(markersFile) from TSV_MARKERS
+        set val(markerType), val(markerVal), file(markersFile) from TSV_MARKERS
 
     output:
         stdout MARKER_MANIFEST_LINES 
 
     """
-    echo -e "cluster_markers\t${markersFile}\t$resolution"
+    echo -e "$markerType\t${markersFile}\t$markerVal"
     """
 }
 
