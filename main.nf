@@ -49,7 +49,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
     SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.csv", checkIfExists: true )
     SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv" )
-    SCANPY_CELLTYPE_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/celltype_markers_*.csv" )
+    SCANPY_CELLTYPE_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/celltype_markers.csv" )
     SCANPY_MARKERS=SCANPY_CLUSTER_MARKERS.concat(SCANPY_CELLTYPE_MARKERS)
 }else{
     RAW_FILTERED_MATRIX = Channel.empty()
