@@ -628,7 +628,7 @@ process renumber_cluster_markers_to_tsv {
         set val(resolution), file(markersFile) from CLUSTER_MARKERS_BY_RESOLUTION
 
     output:
-        set val('cluster_markers'), val(resolution), file("out/${markersFile.baseName}") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
+        set val('cluster_markers'), val(resolution), file("out/${markersFile}") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
 
     """
     #!/usr/bin/env Rscript
@@ -641,7 +641,7 @@ process renumber_cluster_markers_to_tsv {
         markers\$cluster <- markers\$cluster + 1
     }
     dir.create('out')
-    write.csv(markers, file='out/${markersFile.baseName}.csv', sep="\t", quote=FALSE, row.names=FALSE)
+    write.csv(markers, file='out/${markersFile}', sep="\t", quote=FALSE, row.names=FALSE)
     """
 }
 
