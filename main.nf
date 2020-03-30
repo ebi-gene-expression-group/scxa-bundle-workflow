@@ -618,7 +618,7 @@ process renumber_markers_to_tsv {
 
     markers <- read.csv('${markersFile}', check.names = FALSE)
 
-    if ( $resolution != 'N/A' ){
+    if ( "$resolution" != 'N/A' ){
         if ('groups' %in% names(markers) && min(markers\$groups) == 0){
             markers\$groups <- markers\$groups + 1
         }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
