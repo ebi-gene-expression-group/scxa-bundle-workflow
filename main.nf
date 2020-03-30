@@ -616,7 +616,7 @@ process mark_marker_meta {
 
 // Convert the marker files to tsv
 
-process renumber_cluster_markers_to_tsv {
+process markers_to_tsv {
     
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
 
@@ -640,8 +640,8 @@ process renumber_cluster_markers_to_tsv {
     }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
         markers\$cluster <- markers\$cluster + 1
     }
-    dir.create('out')
-    write.csv(markers, file='out/${markersFile}', sep="\t", quote=FALSE, row.names=FALSE)
+    dir.create('out', showWarnings = FALSE)
+    write.csv(markers, file='out/${markersFile}', quote=FALSE, row.names=FALSE)
     """
 }
 
