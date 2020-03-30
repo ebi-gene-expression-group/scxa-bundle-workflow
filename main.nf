@@ -592,7 +592,7 @@ process mark_marker_resolutions {
         file markersFile from SCANPY_CLUSTER_MARKERS
 
     output:
-        stdout, file (markersFile) into CLUSTER_MARKERS_BY_RESOLUTION 
+        set stdout, file (markersFile) into CLUSTER_MARKERS_BY_RESOLUTION 
 
     """
         echo $markersFile | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
@@ -628,7 +628,7 @@ process renumber_cluster_markers_to_tsv {
         set val(resolution), file(markersFile) from CLUSTER_MARKERS_BY_RESOLUTION
 
     output:
-        set set val('cluster_markers'), val(resolution), file("out/${markersFile.baseName}") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
+        set val('cluster_markers'), val(resolution), file("out/${markersFile.baseName}") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
 
     """
     #!/usr/bin/env Rscript
