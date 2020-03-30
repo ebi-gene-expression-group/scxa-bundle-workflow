@@ -589,7 +589,7 @@ process mark_marker_resolutions {
         set stdout, file (markersFile) into MARKERS_BY_RESOLUTION 
 
     """
-        if [ $markersFile = 'celltype_markers.csv' ] ]; then
+        if [ $markersFile = 'celltype_markers.csv' ]; then
             echo -n "N/A"
         else
             echo $markersFile | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
