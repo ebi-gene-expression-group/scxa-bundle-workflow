@@ -616,7 +616,7 @@ process mark_marker_meta {
 
 // Convert the marker files to tsv
 
-process markers_to_tsv {
+process renumber_markers {
     
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
 
