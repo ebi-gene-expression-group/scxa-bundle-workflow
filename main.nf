@@ -47,9 +47,9 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
-    SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.csv", checkIfExists: true )
-    SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv" )
-    SCANPY_META_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/*_markers.csv" )
+    SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.tsv", checkIfExists: true )
+    SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.tsv" )
+    SCANPY_META_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/*_markers.tsv" )
 }else{
     RAW_FILTERED_MATRIX = Channel.empty()
     NORMALISED_MATRIX = Channel.empty()
@@ -323,29 +323,12 @@ process mark_perplexities {
     """
 }
 
-// Convert the t-SNE files to tsv
-
-process tsne_to_tsv {
-    
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
-    
-    input:
-        set val(perplexity), file(embeddings) from EMBEDDINGS_BY_PERPLEXITY
-
-    output:
-        set val(perplexity), file ("tsne_*.tsv") into TSV_EMBEDDINGS 
-
-    """
-    cat $embeddings | sed 's/,/\t/g' > tsne_${perplexity}.tsv
-    """
-}
-
 // Combine the listing of t-SNE files for the manifest
 
 process tsne_lines {
 
     input:
-        set val(perplexity), file(embeddings) from TSV_EMBEDDINGS
+        set val(perplexity), file(embeddings) from EMBEDDINGS_BY_PERPLEXITY
 
     output:
         stdout TSNE_MANIFEST_LINES 
