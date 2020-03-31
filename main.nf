@@ -626,7 +626,7 @@ process renumber_markers {
     """
     #!/usr/bin/env Rscript
 
-    markers <- read.csv('${markersFile}', check.names = FALSE)
+    markers <- read.table('${markersFile}', check.names = FALSE)
 
     if ('groups' %in% names(markers) && min(markers\$groups) == 0){
         markers\$groups <- markers\$groups + 1
@@ -634,24 +634,7 @@ process renumber_markers {
         markers\$cluster <- markers\$cluster + 1
     }
     dir.create('out', showWarnings = FALSE)
-    write.csv(markers, file='out/${markersFile}', quote=FALSE, row.names=FALSE)
-    """
-}
-
-process markers_to_tsv {
-    
-    input:
-        set val(markerType), val(markerVal), file(markersFile) from RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR)
-
-    output:
-        set val(markerType), val(markerVal), file("${markersFile.baseName}.tsv") into TSV_MARKERS
-        
-
-    """
-    #!/usr/bin/env Rscript
-
-    markers <- read.csv('${markersFile}', check.names = FALSE)
-    write.table(markers, file='${markersFile.baseName}.tsv', sep="\t", quote=FALSE, row.names=FALSE)
+    write.table(markers, file='out/${markersFile}', sep="\t", quote=FALSE, row.names=FALSE)
     """
 }
 
@@ -660,7 +643,7 @@ process markers_to_tsv {
 process markers_lines {
 
     input:
-        set val(markerType), val(markerVal), file(markersFile) from TSV_MARKERS
+        set val(markerType), val(markerVal), file(markersFile) from RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR)
 
     output:
         stdout MARKER_MANIFEST_LINES 
