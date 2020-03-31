@@ -627,10 +627,10 @@ process renumber_markers {
     maxRetries 20
 
     input:
-        set val(resolution), file(markersFile) from CLUSTER_MARKERS_BY_RESOLUTION
+        set val(resolution), file('markers.tsv') from CLUSTER_MARKERS_BY_RESOLUTION
 
     output:
-        set val('cluster_markers'), val(resolution), file("markers.tsv") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
+        set val('cluster_markers'), val(resolution), file("markers_${resolution}.tsv") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
 
     """
     #!/usr/bin/env Rscript
