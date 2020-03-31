@@ -603,6 +603,8 @@ process mark_marker_resolutions {
 
 process mark_marker_meta {
 
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    
     input:
         file markersFile from SCANPY_META_MARKERS
 
@@ -610,7 +612,7 @@ process mark_marker_meta {
         set val('meta_markers'), stdout, file (markersFile) into META_MARKERS_BY_VAR 
 
     """
-        echo "$markersFile" | rev | cut -d"_" -f2-  | rev
+        echo "$markersFile" | rev | cut -d"_" -f2-  | rev | tr '\\n' '\\0' 
     """
 }
 
@@ -628,12 +630,12 @@ process renumber_markers {
         set val(resolution), file(markersFile) from CLUSTER_MARKERS_BY_RESOLUTION
 
     output:
-        set val('cluster_markers'), val(resolution), file("out/${markersFile}") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
+        set val('cluster_markers'), val(resolution), file("markers.tsv") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
 
     """
     #!/usr/bin/env Rscript
 
-    markers <- read.table('${markersFile}', check.names = FALSE)
+    markers <- read.delim('markers.tsv', check.names = FALSE)
 
     if ('groups' %in% names(markers) && min(markers\$groups) == 0){
         markers\$groups <- markers\$groups + 1
@@ -641,7 +643,7 @@ process renumber_markers {
         markers\$cluster <- markers\$cluster + 1
     }
     dir.create('out', showWarnings = FALSE)
-    write.table(markers, file='out/${markersFile}', sep="\t", quote=FALSE, row.names=FALSE)
+    write.table(markers, file='markers_${resolution}.tsv', sep="\\t", quote=FALSE, row.names=FALSE)
     """
 }
 
