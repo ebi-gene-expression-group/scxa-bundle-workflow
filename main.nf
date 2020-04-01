@@ -40,6 +40,8 @@ if (isDroplet && isSmart){
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
 REFERENCE_FASTA = Channel.fromPath( "$resultsRoot/${params.referenceFasta}", checkIfExists: true ).first()
 REFERENCE_GTF = Channel.fromPath( "$resultsRoot/${params.referenceGtf}", checkIfExists: true ).first()
+CELL_METADATA = Channel.fromPath( "$resultsRoot/${params.cellMetadata}", checkIfExists: true)
+CONSENSED_SDRF = Channel.fromPath( "$resultsRoot/${params.condensedSdrf}", checkIfExists: true)
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
@@ -88,6 +90,23 @@ RAW_TPM_MATRIX.into{
     RAW_TPM_MATRIX_FOR_FILTERING
     RAW_TPM_MATRIX_FOR_MTX
     RAW_TPM_MATRIX_FOR_TSV
+}
+
+// Make manifest lines for the metadata
+
+process meta_manifest_lines {
+    
+    input:
+        file(cellMeta) from CELL_METADATA
+        file(condensedSdrf) from CONDENSED_SDRF
+
+    output:
+        stdout META_MANIFEST_LINES
+
+    """
+    echo -e "cell_metadata\t$cellMeta\t"
+    echo -e "condensed_sdrf\t$condensedSdrf\t"
+    """
 }
 
 // Make manifest lines for references
@@ -660,6 +679,7 @@ process base_manifest {
         file matrices from MATRIX_MANIFEST_CONTENT
         file software from SOFTWARE_FOR_MANIFEST 
         file reference from REFERENCE_MANIFEST_LINES
+        file meta from META_MANIFEST_LINES
 
     output:
         file "BASE_MANIFEST" into BASE_MANIFEST
@@ -668,6 +688,7 @@ process base_manifest {
         echo -e "Description\tFile\tParameterisation" > BASE_MANIFEST
         echo -e "software_versions_file\t\$(basename ${software})\t" >> BASE_MANIFEST
         cat ${matrices} >> BASE_MANIFEST
+        cat ${meta} >> BASE_MANIFEST
         cat ${reference} >> BASE_MANIFEST
         echo -e protocol\t\t${params.protocolList} >> BASE_MANIFEST
     """
