@@ -323,7 +323,7 @@ process mark_perplexities {
         set stdout, file (tSNE) into EMBEDDINGS_BY_PERPLEXITY 
 
     """
-       echo $tSNE | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
+       echo $tSNE | grep -o -E '[0-9]+' | tr -d \'\\n\'  
     """
 }
 
@@ -578,7 +578,7 @@ process mark_marker_resolutions {
         set stdout, file (markersFile) into CLUSTER_MARKERS_BY_RESOLUTION 
 
     """
-        echo $markersFile | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
+        echo $markersFile | grep -o -E '[0-9]+' | tr -d \'\\n\' 
     """
 }
 
@@ -595,7 +595,7 @@ process mark_marker_meta {
         set val('meta_markers'), stdout, file (markersFile) into META_MARKERS_BY_VAR 
 
     """
-        echo "$markersFile" | rev | cut -d"_" -f2-  | rev | tr '\\n' '\\0' 
+        echo "$markersFile" | rev | cut -d"_" -f2-  | rev | tr -d \'\\n\' 
     """
 }
 
