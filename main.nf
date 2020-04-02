@@ -595,7 +595,7 @@ process renumber_clusters {
 
 process mark_marker_resolutions {
 
-    executor 'local'
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
         file markersFile from SCANPY_CLUSTER_MARKERS
