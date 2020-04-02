@@ -338,6 +338,8 @@ process finalise_software {
 
 process mark_perplexities {
 
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    
     input:
         file tSNE from SCANPY_TSNE
 
@@ -590,8 +592,6 @@ process renumber_clusters {
 
 process mark_marker_resolutions {
 
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
-    
     input:
         file markersFile from SCANPY_CLUSTER_MARKERS
 
