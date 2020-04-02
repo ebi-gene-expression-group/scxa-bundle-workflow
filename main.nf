@@ -97,6 +97,8 @@ RAW_TPM_MATRIX.into{
 
 process meta_manifest_lines {
     
+    executor 'local'
+    
     publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
     input:
@@ -162,6 +164,8 @@ process publish_reference {
 
 process reference_supplementary_lines {
 
+    executor 'local'
+    
     input:
         file(referenceFasta) from REFERENCE_FASTA
         file(referenceGtf) from REFERENCE_GTF
@@ -340,6 +344,8 @@ process finalise_software {
 
 process mark_perplexities {
 
+    executor 'local'
+    
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
@@ -358,7 +364,7 @@ process mark_perplexities {
 process tsne_lines {
 
     executor 'local'
-
+    
     input:
         set val(perplexity), file(embeddings) from EMBEDDINGS_BY_PERPLEXITY
 
@@ -548,6 +554,8 @@ BIG_MATRICES
 // Make manifest lines for matrices
 
 process matrix_lines {
+    
+    executor 'local'
 
     executor 'local'
     
@@ -595,6 +603,8 @@ process renumber_clusters {
 
 process mark_marker_resolutions {
 
+    executor 'local'
+    
     input:
         file markersFile from SCANPY_CLUSTER_MARKERS
 
@@ -610,6 +620,8 @@ process mark_marker_resolutions {
 
 process mark_marker_meta {
 
+    executor 'local'
+    
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
@@ -689,6 +701,8 @@ MARKER_MANIFEST_LINES
 
 process base_manifest {
 
+    executor 'local'
+    
     input:
         file matrices from MATRIX_MANIFEST_CONTENT
         file software from SOFTWARE_FOR_MANIFEST 
@@ -722,6 +736,8 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
         .set { STARTING_MANIFEST }
 
     process tertiary_manifest {
+    
+        executor 'local'
 
         publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
         
@@ -741,6 +757,8 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 }else{
 
     process publish_manifest {
+    
+        executor 'local'
         
         publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
         
