@@ -103,29 +103,14 @@ process meta_manifest_lines {
 
     output:
         stdout META_MANIFEST_LINES
-
-    """
-    echo -e "cell_metadata\t$cellMeta\t"
-    echo -e "condensed_sdrf\t$condensedSdrf\t"
-    """
-}
-
-// Publish meta files to bundle
-
-process publish_meta {
-    
-    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
-    
-    input:
-        file(cellMeta) from CELL_METADATA
-        file(condensedSdrf) from CONDENSED_SDRF
-
-    output:
-        file(cellMeta)
         file("${expName}.condensed-sdrf.tsv")
-        
+        file("${expName}.cell_metadata.tsv")
+
     """
     cp -P $condensedSdrf ${expName}.condensed-sdrf.tsv
+    cp -P $cellMeta ${expName}.cell_metadata.tsv
+    echo -e "cell_metadata\t${expName}.cell_metadata.tsv\t"
+    echo -e "condensed_sdrf\t${expName}.condensed-sdrf.tsv\t"
     """
 }
 
