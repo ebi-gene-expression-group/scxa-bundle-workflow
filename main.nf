@@ -6,6 +6,7 @@ expressionTypes = [ 'raw' ]
 
 resultsRoot = params.resultsRoot
 masterWorkflow = params.masterWorkflow
+expName = params.expName
 tertiarySoftwareReport = 'None'
 
 if ( params.containsKey('tertiaryWorkflow' )){
@@ -106,6 +107,25 @@ process meta_manifest_lines {
     """
     echo -e "cell_metadata\t$cellMeta\t"
     echo -e "condensed_sdrf\t$condensedSdrf\t"
+    """
+}
+
+// Publish meta files to bundle
+
+process publish_meta {
+    
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    
+    input:
+        file(cellMeta) from CELL_METADATA
+        file(condensedSdrf) from CONDENSED_SDRF
+
+    output:
+        file(cellMeta)
+        file("${expName}.condensed-sdrf.tsv")
+        
+    """
+    cp -P $condensedSdrf ${expName}.condensed-sdrf.tsv
     """
 }
 
