@@ -97,6 +97,8 @@ RAW_TPM_MATRIX.into{
 
 process meta_manifest_lines {
     
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    
     input:
         file(cellMeta) from CELL_METADATA
         file(condensedSdrf) from CONDENSED_SDRF
