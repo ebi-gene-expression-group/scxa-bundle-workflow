@@ -577,6 +577,8 @@ process matrix_lines {
 
 process renumber_clusters {
     
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
@@ -748,7 +750,6 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 
         output:
             file "MANIFEST"
-            file(clusters)
 
         """
             cp $startingManifest MANIFEST
