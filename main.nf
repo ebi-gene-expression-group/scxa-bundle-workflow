@@ -579,9 +579,7 @@ process matrix_lines {
 
 process renumber_clusters {
     
-    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
-    
-    conda "${workflow.projectDir}/envs/r-data.table.yml"
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
