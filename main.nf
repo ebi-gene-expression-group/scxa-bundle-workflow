@@ -132,8 +132,8 @@ process reference_manifest_lines {
         stdout REFERENCE_MANIFEST_LINES 
 
     """
-    echo -e "reference_transcriptome\t$referenceFasta\t"
-    echo -e "reference_annotation\t$referenceGtf\t"
+    echo -e "reference_transcriptome\treference/$referenceFasta\t"
+    echo -e "reference_annotation\treference/$referenceGtf\t"
     """
 }
 
