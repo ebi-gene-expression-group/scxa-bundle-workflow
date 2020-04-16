@@ -406,6 +406,11 @@ process repackage_matrices {
 
     publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
+    conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
+    
+    memory { 5.GB * task.attempt }
+    maxRetries 20
+    
     input:
         set file(expressionMatrix), val(expressionType) from MATRICES_TO_REPACKAGE
 
@@ -422,12 +427,14 @@ process repackage_matrices {
         if [ "\$zipdir" != ${expressionType} ]; then
             ln -s \$zipdir ${expressionType}            
         fi
+
+        mv ${expressionType} ${expressionType}_tmp
+        reorder.R ${expressionType}_tmp ${expressionType}     
  
         gzip ${expressionType}/matrix.mtx
         gzip ${expressionType}/genes.tsv
         gzip ${expressionType}/barcodes.tsv
     """        
-
 }
 
 // Make cell - library mappings for droplet experiments 
