@@ -346,8 +346,6 @@ process mark_perplexities {
 
     executor 'local'
     
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
-    
     input:
         file tSNE from SCANPY_TSNE
 
@@ -365,14 +363,18 @@ process tsne_lines {
 
     executor 'local'
     
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    
     input:
-        set val(perplexity), file(embeddings) from EMBEDDINGS_BY_PERPLEXITY
+        set val(perplexity), file('embeddings') from EMBEDDINGS_BY_PERPLEXITY
 
     output:
-        stdout TSNE_MANIFEST_LINES 
+        stdout TSNE_MANIFEST_LINES
+        file("tsne_perplexity_${perplexity}.tsv") 
 
     """
-    echo -e "tnse_embeddings\t${embeddings}\t$perplexity"
+    echo -e "tsne_embeddings\ttsne_perplexity_${perplexity}.tsv\t$perplexity"
+    cp embeddings tsne_perplexity_${perplexity}.tsv
     """
 }
 
