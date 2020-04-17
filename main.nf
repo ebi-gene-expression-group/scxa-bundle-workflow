@@ -409,10 +409,11 @@ process repackage_matrices {
     publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
     conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
-    
+   
     memory { 5.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
-    
+ 
     input:
         set file(expressionMatrix), val(expressionType) from MATRICES_TO_REPACKAGE
 
