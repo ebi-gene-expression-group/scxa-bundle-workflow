@@ -553,7 +553,7 @@ process matrix_lines {
 
 process renumber_clusters {
     
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
     conda "${workflow.projectDir}/envs/r-data.table.yml"
     
