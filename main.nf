@@ -578,7 +578,7 @@ process renumber_clusters {
             clusters <- cbind(clusters[,c(1,2)], clusters[,c(-1,-2)]+1)
         }
 
-        fwrite(clusters, file='clusters_for_bundle_test.txt', sep="\t", quote=FALSE, row.names = FALSE)
+        fwrite(clusters, file='clusters_for_bundle.txt', sep="\t", quote=FALSE, row.names = FALSE)
     """
 }
 
