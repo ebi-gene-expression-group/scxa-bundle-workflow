@@ -553,6 +553,10 @@ process matrix_lines {
 
 process renumber_clusters {
     
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    
+    conda "${workflow.projectDir}/envs/r-data.table.yml"
+    
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
@@ -566,13 +570,15 @@ process renumber_clusters {
     """
         #!/usr/bin/env Rscript
 
-        clusters <- read.delim('possibly_misnumbered_clusters.txt', check.names=FALSE)
+        library(data.table)
+
+        clusters <- fread('possibly_misnumbered_clusters.txt', check.names=FALSE)
 
         if (min(clusters[,c(-1,-2)]) == 0){
-            clusters[,c(-1,-2)] <- clusters[,c(-1,-2)]+1
+            clusters <- cbind(clusters[,c(1,2)], clusters[,c(-1,-2)]+1)
         }
 
-        write.table(clusters, file='clusters_for_bundle.txt', sep="\t", quote=FALSE, row.names = FALSE)
+        fwrite(clusters, file='clusters_for_bundle_test.txt', sep="\t", quote=FALSE, row.names = FALSE)
     """
 }
 
