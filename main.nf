@@ -590,6 +590,8 @@ process renumber_clusters {
     
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
+    conda "${workflow.projectDir}/envs/r-data.table.yml"
+    
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
@@ -601,8 +603,17 @@ process renumber_clusters {
         file 'clusters_for_bundle.txt' into FINAL_CLUSTERS
 
     """
-        renumberClusters.R possibly_misnumbered_clusters.txt clusters_for_bundle.txt.tmp
-        mv clusters_for_bundle.txt.tmp clusters_for_bundle.txt      
+        #!/usr/bin/env Rscript
+
+        library(data.table)
+
+        clusters <- fread('possibly_misnumbered_clusters.txt', check.names=FALSE)
+
+        if (min(clusters[,c(-1,-2)]) == 0){
+            clusters <- cbind(clusters[,c(1,2)], clusters[,c(-1,-2)]+1)
+        }
+
+        fwrite(clusters, file='clusters_for_bundle_test.txt', sep="\t", quote=FALSE, row.names = FALSE)
     """
 }
 
