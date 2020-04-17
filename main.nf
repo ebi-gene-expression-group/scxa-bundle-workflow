@@ -603,17 +603,8 @@ process renumber_clusters {
         file 'clusters_for_bundle.txt' into FINAL_CLUSTERS
 
     """
-        #!/usr/bin/env Rscript
-
-        library(data.table)
-
-        clusters <- fread('possibly_misnumbered_clusters.txt', check.names=FALSE)
-
-        if (min(clusters[,c(-1,-2)]) == 0){
-            clusters <- cbind(clusters[,c(1,2)], clusters[,c(-1,-2)]+1)
-        }
-
-        fwrite(clusters, file='clusters_for_bundle.txt', sep="\t", quote=FALSE, row.names = FALSE)
+        renumberClusters.R possibly_misnumbered_clusters.txt clusters_for_bundle.txt.tmp
+        mv clusters_for_bundle.txt.tmp clusters_for_bundle.txt      
     """
 }
 
