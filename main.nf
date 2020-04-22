@@ -93,6 +93,8 @@ RAW_TPM_MATRIX.into{
 
 process reference_manifest_lines {
 
+    executor 'local'
+
     input:
         file(referenceFasta) from REFERENCE_FASTA
         file(referenceGtf) from REFERENCE_GTF
@@ -311,6 +313,8 @@ process finalise_software {
 
 process mark_perplexities {
 
+    executor 'local'
+    
     input:
         file tSNE from SCANPY_TSNE
 
@@ -342,6 +346,8 @@ process tsne_to_tsv {
 // Combine the listing of t-SNE files for the manifest
 
 process tsne_lines {
+
+    executor 'local'
 
     input:
         set val(perplexity), file(embeddings) from TSV_EMBEDDINGS
@@ -533,6 +539,8 @@ BIG_MATRICES
 
 process matrix_lines {
 
+    executor 'local'
+    
     input:
         set val(expressionType), file(matrixRows), file(matrixCols), file(matrixContent), file(tsvMatrix) from MTX_MATRIX_ROWNAMES.join(MTX_MATRIX_COLNAMES_FOR_MANIFEST_LINES).join(MTX_MATRIX_CONTENT).join(TSV_AND_NOTSV_MATRICES)
 
@@ -577,6 +585,8 @@ process renumber_clusters {
 
 process mark_marker_resolutions {
 
+    executor 'local'
+    
     input:
         file markersFile from SCANPY_MARKERS
 
@@ -623,6 +633,8 @@ process renumber_markers_to_tsv {
 
 process markers_lines {
 
+    executor 'local'
+    
     input:
         set val(resolution), file(markersFile) from TSV_MARKERS
 
