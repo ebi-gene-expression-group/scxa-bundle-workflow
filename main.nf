@@ -612,7 +612,7 @@ process renumber_markers {
         set val(resolution), file('markers.tsv') from MARKERS_BY_RESOLUTION
 
     output:
-        set val(resolution), file("markers_${resolution}.tsv") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
+        set val(resolution), file("markers_${resolution}.tsv") into TSV_MARKERS
 
     """
     #!/usr/bin/env Rscript
