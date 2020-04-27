@@ -600,32 +600,32 @@ process mark_marker_resolutions {
 
 // Convert the marker files to tsv
 
-process renumber_markers_to_tsv {
-    
+process renumber_markers {
+
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
 
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
-    
+
     input:
-        set val(resolution), file(markersFile) from MARKERS_BY_RESOLUTION
+        set val(resolution), file('markers.tsv') from MARKERS_BY_RESOLUTION
 
     output:
-        set val(resolution), file("markers_*.tsv") into TSV_MARKERS
+        set val(resolution), file("markers_${resolution}.tsv") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
 
     """
     #!/usr/bin/env Rscript
 
-    markers <- read.csv('${markersFile}', check.names = FALSE)
+    markers <- read.delim('markers.tsv', check.names = FALSE)
 
     if ('groups' %in% names(markers) && min(markers\$groups) == 0){
         markers\$groups <- markers\$groups + 1
     }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
         markers\$cluster <- markers\$cluster + 1
     }
-
-    write.table(markers, file='markers_${resolution}.tsv', sep="\t", quote=FALSE, row.names=FALSE)
+    dir.create('out', showWarnings = FALSE)
+    write.table(markers, file='markers_${resolution}.tsv', sep="\\t", quote=FALSE, row.names=FALSE)
     """
 }
 
