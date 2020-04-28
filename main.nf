@@ -594,7 +594,7 @@ process mark_marker_resolutions {
         set stdout, file (markersFile) into MARKERS_BY_RESOLUTION 
 
     """
-       echo $markersFile | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
+       echo $markersFile | grep -o -E '[0-9]+' | tr -d \'\\n\' 
     """
 }
 
