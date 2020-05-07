@@ -67,6 +67,13 @@ option_list = list(
     help = "A file containing cell type marker statistics, to be included with the processing of the cluster markers"
   ),
   make_option(
+    c("-s", "--select-top"),
+    action = "store",
+    default = NA,
+    type = 'numeric',
+    help = "Select the top n markers in each clustering"
+  ),
+  make_option(
     c("-o", "--output-file"),
     action = "store",
     default = NA,
@@ -158,21 +165,15 @@ if (! is.na(opt$celltype_markers_file)){
 cluster_markers <- do.call(rbind, lapply(names(marker_files), function(x) cbind(exp_id = opt$experiment_id, variable = x, fread(marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
 cluster_markers$cluster <- sub('^nan$', 'None', cluster_markers$cluster)
 
-# We're ultimately populating a table like:
-#
-# Materialized view "atlasprd3.scxa_marker_gene_stats"
-# Column          |          Type          | Collation | Nullable | Default 
-# -------------------------+------------------------+-----------+----------+---------
-#   experiment_accession    | character varying(255) |           |          | 
-#   gene_id                 | character varying(255) |           |          | 
-#   grouping_where_marker          | integer                |           |          | 
-#   group_where_marker | integer                |           |          | 
-#   cluster_id              | integer                |           |          | 
-#   marker_p_value          | double precision       |           |          | 
-#   mean_expression         | double precision       |           |          | 
-#   median_expression       | double precision       |           |          | 
-#
-# ... so do some column renaming
+# Rank by padj within each clustering (and filter)
+
+if (! is.na(opt$select_top)){
+  cluster_markers <- do.call(rbind, lapply(split(cluster_markers, paste(cluster_markers$variable, cluster_markers$cluster)), function(x){
+    x[order(x$pvals_adj) <= opt$select_top, ]
+  }))
+}
+
+# Do some column renaming
 
 cluster_markers <- cluster_markers[,c('exp_id',  'genes', 'variable', 'cluster','pvals_adj')]
 colnames(cluster_markers) <- c('experiment_accession', 'gene_id', 'grouping_where_marker', 'group_where_marker', 'marker_p_value')
