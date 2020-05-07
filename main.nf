@@ -638,7 +638,7 @@ process mark_marker_meta {
 
     executor 'local'
     
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
     input:
         file markersFile from SCANPY_META_MARKERS
