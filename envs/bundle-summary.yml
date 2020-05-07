@@ -1,0 +1,8 @@
+name: bundle-summary
+dependencies:
+  - r-data.table
+  - r-optparse 
+  - bioconductor-dropletutils 
+  - r-r.utils 
+  - bioconductor-sparsematrixstats 
+  - r-tidyr

@@ -76,6 +76,7 @@ option_list = list(
 )
 
 opt <- parse_args(OptionParser(option_list = option_list), convert_hyphens_to_underscores = TRUE)
+saveRDS(opt, file = "opt.rds")
 
 # Argument checking
 
@@ -102,7 +103,7 @@ colnames(clusters) <- as.character(ks)
 
 # Add other cell groupings, where provided
 
-if ((! is.na(opt$cellgroups_file)) && (! is.na(opt$celltype_fields))){
+if ((! is.na(opt$celltype_markers_file)) && (! is.na(opt$cellgroups_file)) && (! is.na(opt$celltype_fields))){
   cellgroups <- fread(opt$cellgroups_file, select = c('id', unlist(strsplit(opt$celltype_fields, ','))))
   for (cg in names(cellgroups)[-1]){
     cellgroups[[cg]] <- sub('^$', 'None', cellgroups[[cg]])
@@ -176,6 +177,10 @@ cluster_markers$cluster <- sub('^nan$', 'None', cluster_markers$cluster)
 cluster_markers <- cluster_markers[,c('exp_id',  'genes', 'variable', 'cluster','pvals_adj')]
 colnames(cluster_markers) <- c('experiment_accession', 'gene_id', 'grouping_where_marker', 'group_where_marker', 'marker_p_value')
 
+# Remove clusterings with no markers
+
+clusters <- clusters[,colnames(clusters) %in% cluster_markers$grouping_where_marker, drop = FALSE]
+
 # Match the matrix order to the clustering file, and remove any genes not present in the markers for speed
 
 counts <- counts[rownames(counts) %in% cluster_markers$gene_id, match(rownames(clusters), colnames(counts))]
@@ -188,7 +193,7 @@ cluster_stats <- do.call(rbind, lapply(colnames(clusters), function(x){
   # We're only interested in genes that were actually markers at this K
   k_genes <- unique(subset(cluster_markers, grouping_where_marker == x)$gene_id)
     
-  cells_by_cluster <- split(rownames(clusters), factor(clusters[[x]]))
+  cells_by_cluster <- split(rownames(clusters), factor(clusters[,x]))
     
   do.call(rbind, lapply(
     names(cells_by_cluster), 
