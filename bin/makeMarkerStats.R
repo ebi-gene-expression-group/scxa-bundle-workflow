@@ -11,13 +11,6 @@ option_list = list(
     help = "Path to old-school 10X dir with barcodes.tsv, genes.tsv and matrix.mtx, for count data"
   ),
   make_option(
-    c("-e", "--experiment-id"),
-    action = "store",
-    default = NA,
-    type = 'character',
-    help = "Atlas experiment ID these markers were derived for"
-  ),
-  make_option(
     c("-t", "--tpm-dir"),
     action = "store",
     default = NA,
@@ -87,7 +80,7 @@ saveRDS(opt, file = "opt.rds")
 
 # Argument checking
 
-compulsory = c('counts_dir', 'experiment_id', 'clusters_file', 'cluster_markers_dir', 'output_file', 'cluster_markers_file_pattern')
+compulsory = c('counts_dir', 'clusters_file', 'cluster_markers_dir', 'output_file', 'cluster_markers_file_pattern')
 for (c in compulsory){
   if(is.na(opt[[c]])){
     write(paste('Required argument', c, 'missing'), stderr())
@@ -162,7 +155,7 @@ if (! is.na(opt$celltype_markers_file)){
   marker_files['inferred_cell_type'] <- opt$celltype_markers_file
 }
 
-cluster_markers <- do.call(rbind, lapply(names(marker_files), function(x) cbind(exp_id = opt$experiment_id, variable = x, fread(marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
+cluster_markers <- do.call(rbind, lapply(names(marker_files), function(x) cbind(variable = x, fread(marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
 cluster_markers$cluster <- sub('^nan$', 'None', cluster_markers$cluster)
 
 # Rank by padj within each clustering (and filter)
@@ -175,8 +168,8 @@ if (! is.na(opt$select_top)){
 
 # Do some column renaming
 
-cluster_markers <- cluster_markers[,c('exp_id',  'genes', 'variable', 'cluster','pvals_adj')]
-colnames(cluster_markers) <- c('experiment_accession', 'gene_id', 'grouping_where_marker', 'group_where_marker', 'marker_p_value')
+cluster_markers <- cluster_markers[,c('genes', 'variable', 'cluster','pvals_adj')]
+colnames(cluster_markers) <- c('gene_id', 'grouping_where_marker', 'group_where_marker', 'marker_p_value')
 
 # Remove clusterings with no markers
 
@@ -200,7 +193,6 @@ cluster_stats <- do.call(rbind, lapply(colnames(clusters), function(x){
     names(cells_by_cluster), 
     function(y){
       data.table(
-        experiment_accession = opt$experiment_id,
         gene_id = k_genes,
         grouping_where_marker = x,
         cluster_id = y,
@@ -229,4 +221,4 @@ final <- merge(cluster_stats, cluster_markers[,c('key', 'group_where_marker', 'm
 # Write output
 
 print("Writing output...")
-fwrite(final[,c('experiment_accession', 'gene_id', 'grouping_where_marker', 'group_where_marker', 'cluster_id', 'marker_p_value', 'mean_expression', 'median_expression')], file = opt$output_file, sep=",", quote = TRUE)
+fwrite(final[,c('gene_id', 'grouping_where_marker', 'group_where_marker', 'cluster_id', 'marker_p_value', 'mean_expression', 'median_expression')], file = opt$output_file, sep=",", quote = TRUE)

@@ -712,13 +712,13 @@ process bundle_summary {
         celltype_markers_opt='--celltype-markers-file=celltype_markers.tsv'
     fi
 
-    bundle_summary.R \
+    makeMarkerStats.R \
         --counts-dir=filtered_normalised \
-        --experiment-id=${expName} \
         --clusters-file=${clusters} \
         --cluster-markers-dir=\$(pwd) \
         --cellgroups-file=${cellMeta} \$celltype_markers_opt \
-        --output-file=bundle_summary.csv
+        --select-top=${params.topmarkersForSummary} \
+        --output-file=marker_stats.csv
     """
 }
 
