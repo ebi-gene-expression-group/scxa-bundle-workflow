@@ -786,7 +786,6 @@ process base_manifest {
         file software from SOFTWARE_FOR_MANIFEST 
         file reference from REFERENCE_MANIFEST_LINES
         file meta from META_MANIFEST_LINES
-        file sum from SUMMARY_MANIFEST_LINES
 
     output:
         file "BASE_MANIFEST" into BASE_MANIFEST
@@ -797,7 +796,6 @@ process base_manifest {
         cat ${matrices} >> BASE_MANIFEST
         cat ${meta} >> BASE_MANIFEST
         cat ${reference} >> BASE_MANIFEST
-        cat ${sum} >> BASE_MANIFEST
         echo -e protocol\t\t${params.protocolList} >> BASE_MANIFEST
     """
 
@@ -812,6 +810,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     BASE_MANIFEST
         .concat(TSNE_MANIFEST_CONTENT)
         .concat(MARKER_MANIFEST_CONTENT)
+        .concat(SUMMARY_MANIFEST_CONTENT)
         .collectFile(name: 'manifest_lines.tsv', newLine: false, sort: 'index' )
         .set { STARTING_MANIFEST }
 
