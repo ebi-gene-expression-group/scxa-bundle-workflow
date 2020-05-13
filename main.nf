@@ -713,7 +713,7 @@ process bundle_summary {
         celltype_markers_opt='--celltype-markers-file=celltype_markers.tsv'
     fi
 
-    for matrix_type in filtered_normalised tmp_filtered; do
+    for matrix_type in filtered_normalised tpm_filtered; do
         if [ -d \$matrix_type ]; then
             makeMarkerStats.R \
                 --counts-dir=\$matrix_type \
