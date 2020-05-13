@@ -704,7 +704,8 @@ process bundle_summary {
        file cellMeta from CELL_METADATA
 
     output:
-        file('bundle_summary.csv') into BUNDLE_SUMMARY
+        set val('filtered_normalised'), file('filtered_normalised_stats.csv') into BUNDLE_SUMMARY
+        set val('tpm_filtered'), file('tpm_filtered_stats.csv') into BUNDLE_SUMMARY_TPM
 
     """
     celltype_markers_opt=
@@ -712,13 +713,32 @@ process bundle_summary {
         celltype_markers_opt='--celltype-markers-file=celltype_markers.tsv'
     fi
 
-    makeMarkerStats.R \
-        --counts-dir=filtered_normalised \
-        --clusters-file=${clusters} \
-        --cluster-markers-dir=\$(pwd) \
-        --cellgroups-file=${cellMeta} \$celltype_markers_opt \
-        --select-top=${params.topmarkersForSummary} \
-        --output-file=marker_stats.csv
+    for matrix_type in filtered_normalised tmp_filtered; do
+        if [ -d \$matrix_type ]; then
+            makeMarkerStats.R \
+                --counts-dir=\$matrix_type \
+                --clusters-file=${clusters} \
+                --cluster-markers-dir=\$(pwd) \
+                --cellgroups-file=${cellMeta} \$celltype_markers_opt \
+                --select-top=${params.topmarkersForSummary} \
+                --output-file=\${matrix_type}_stats.csv
+        fi
+    done
+    """
+}
+
+process bundle_summary_lines{
+    
+    executor 'local'
+
+    input:
+        set val(matrixType), file(markerStats) from BUNDLE_SUMMARY.concat(BUNDLE_SUMMARY_TPM)
+
+    output:
+        stdout SUMMARY_MANIFEST_LINES
+
+    """
+    echo -e "marker_stats\t${markerStats}\t$matrixType"
     """
 }
 
@@ -751,6 +771,10 @@ MARKER_MANIFEST_LINES
     .collectFile(name: 'markers.txt',  newLine: false, sort: true )
     .set{ MARKER_MANIFEST_CONTENT }
 
+SUMMARY_MANIFEST_LINES
+    .collectFile(name: 'summaries.txt',  newLine: false, sort: true )
+    .set{ SUMMARY_MANIFEST_CONTENT }
+
 // Build the manifest from collected components
 
 process base_manifest {
@@ -762,6 +786,7 @@ process base_manifest {
         file software from SOFTWARE_FOR_MANIFEST 
         file reference from REFERENCE_MANIFEST_LINES
         file meta from META_MANIFEST_LINES
+        file sum from SUMMARY_MANIFEST_LINES
 
     output:
         file "BASE_MANIFEST" into BASE_MANIFEST
@@ -772,6 +797,7 @@ process base_manifest {
         cat ${matrices} >> BASE_MANIFEST
         cat ${meta} >> BASE_MANIFEST
         cat ${reference} >> BASE_MANIFEST
+        cat ${sum} >> BASE_MANIFEST
         echo -e protocol\t\t${params.protocolList} >> BASE_MANIFEST
     """
 
