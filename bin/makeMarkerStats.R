@@ -11,13 +11,6 @@ option_list = list(
     help = "Path to old-school 10X dir with barcodes.tsv, genes.tsv and matrix.mtx, for count data"
   ),
   make_option(
-    c("-t", "--tpm-dir"),
-    action = "store",
-    default = NA,
-    type = 'character',
-    help = "Path to old-school 10X dir with barcodes.tsv, genes.tsv and matrix.mtx, for tpm data"
-  ),
-  make_option(
     c("-j", "--clusters-file"),
     action = "store",
     default = NA,
