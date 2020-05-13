@@ -823,7 +823,6 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
         input:
             file startingManifest from STARTING_MANIFEST
             file clusters from FINAL_CLUSTERS_FOR_MANIFEST
-            file bundle_summary from BUNDLE_SUMMARY
 
         output:
             file "MANIFEST"
@@ -831,7 +830,6 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
         """
             cp $startingManifest MANIFEST
             echo -e "cluster_memberships\t${clusters}" >> MANIFEST
-            echo -e "bundle_summary\t${bundle_summary}" >> MANIFEST
         """
     }
 
