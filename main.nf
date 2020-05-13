@@ -705,7 +705,7 @@ process bundle_summary {
 
     output:
         set val('filtered_normalised'), file('filtered_normalised_stats.csv') into BUNDLE_SUMMARY
-        set val('tpm_filtered'), file('tpm_filtered_stats.csv') into BUNDLE_SUMMARY_TPM
+        set val('tpm_filtered'), file('tpm_filtered_stats.csv') optional true into BUNDLE_SUMMARY_TPM
 
     """
     celltype_markers_opt=
