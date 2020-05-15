@@ -421,7 +421,8 @@ process repackage_matrices {
         set val(expressionType), file("${expressionType}/genes.tsv.gz") into MTX_MATRIX_ROWNAMES
         set val(expressionType), file("${expressionType}/barcodes.tsv.gz") into MTX_MATRIX_COLNAMES
         set val(expressionType), file("${expressionType}/matrix.mtx.gz") into MTX_MATRIX_CONTENT
-
+        set val(expressionType), file("${expressionType}") into MTX_MATRICES_FOR_SUMMARY
+        
 
     """
         zipdir=\$(unzip -qql ${expressionMatrix.getBaseName()}.zip | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
@@ -521,6 +522,8 @@ MATRICES_FOR_TSV_WITH_COUNT
 
 process mtx_to_tsv {
     
+    cache 'lenient'
+    
     conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
 
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
@@ -609,6 +612,11 @@ process renumber_clusters {
     """
 }
 
+FINAL_CLUSTERS.into{
+    FINAL_CLUSTERS_FOR_MANIFEST
+    FINAL_CLUSTERS_FOR_SUMMARY
+}
+
 // Find out what resolutions are represented by the marker files
 
 process mark_marker_resolutions {
@@ -632,7 +640,7 @@ process mark_marker_meta {
 
     executor 'local'
     
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
     input:
         file markersFile from SCANPY_META_MARKERS
@@ -649,7 +657,7 @@ process mark_marker_meta {
 
 process renumber_markers {
     
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
 
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
@@ -678,12 +686,70 @@ process renumber_markers {
 
 // Combine the listing of markers files for the manifest
 
+RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR).into{
+    ALL_MARKERS_FOR_MANIFEST
+    ALL_MARKERS_FOR_SUMMARY
+}
+
+// Make a summary file to be used in lieu of the old materialised view
+
+process bundle_summary {
+
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    
+    conda "${workflow.projectDir}/envs/bundle-summary.yml"
+    
+    input:
+       file("*") from MTX_MATRICES_FOR_SUMMARY.map{r -> r[1]}.collect() 
+       file("*") from ALL_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
+       file clusters from FINAL_CLUSTERS_FOR_SUMMARY
+       file cellMeta from CELL_METADATA
+
+    output:
+        set val('filtered_normalised'), file('filtered_normalised_stats.csv') into BUNDLE_SUMMARY
+        set val('tpm_filtered'), file('tpm_filtered_stats.csv') optional true into BUNDLE_SUMMARY_TPM
+
+    """
+    celltype_markers_opt=
+    if [ -e 'celltype_markers.tsv' ]; then
+        celltype_markers_opt='--celltype-markers-file=celltype_markers.tsv'
+    fi
+
+    for matrix_type in filtered_normalised tpm_filtered; do
+        if [ -d \$matrix_type ]; then
+            makeMarkerStats.R \
+                --counts-dir=\$matrix_type \
+                --clusters-file=${clusters} \
+                --cluster-markers-dir=\$(pwd) \
+                --cellgroups-file=${cellMeta} \$celltype_markers_opt \
+                --select-top=${params.topmarkersForSummary} \
+                --output-file=\${matrix_type}_stats.csv
+        fi
+    done
+    """
+}
+
+process bundle_summary_lines{
+    
+    executor 'local'
+
+    input:
+        set val(matrixType), file(markerStats) from BUNDLE_SUMMARY.concat(BUNDLE_SUMMARY_TPM)
+
+    output:
+        stdout SUMMARY_MANIFEST_LINES
+
+    """
+    echo -e "marker_stats\t${markerStats}\t$matrixType"
+    """
+}
+
 process markers_lines {
 
     executor 'local'
     
     input:
-        set val(markerType), val(markerVal), file(markersFile) from RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR)
+        set val(markerType), val(markerVal), file(markersFile) from ALL_MARKERS_FOR_MANIFEST
 
     output:
         stdout MARKER_MANIFEST_LINES 
@@ -706,6 +772,10 @@ MATRIX_MANIFEST_LINES
 MARKER_MANIFEST_LINES
     .collectFile(name: 'markers.txt',  newLine: false, sort: true )
     .set{ MARKER_MANIFEST_CONTENT }
+
+SUMMARY_MANIFEST_LINES
+    .collectFile(name: 'summaries.txt',  newLine: false, sort: true )
+    .set{ SUMMARY_MANIFEST_CONTENT }
 
 // Build the manifest from collected components
 
@@ -742,6 +812,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     BASE_MANIFEST
         .concat(TSNE_MANIFEST_CONTENT)
         .concat(MARKER_MANIFEST_CONTENT)
+        .concat(SUMMARY_MANIFEST_CONTENT)
         .collectFile(name: 'manifest_lines.tsv', newLine: false, sort: 'index' )
         .set { STARTING_MANIFEST }
 
@@ -753,7 +824,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
         
         input:
             file startingManifest from STARTING_MANIFEST
-            file clusters from FINAL_CLUSTERS
+            file clusters from FINAL_CLUSTERS_FOR_MANIFEST
 
         output:
             file "MANIFEST"
