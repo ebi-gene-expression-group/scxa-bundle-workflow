@@ -421,7 +421,7 @@ process repackage_matrices {
         set val(expressionType), file("${expressionType}/genes.tsv.gz") into MTX_MATRIX_ROWNAMES
         set val(expressionType), file("${expressionType}/barcodes.tsv.gz") into MTX_MATRIX_COLNAMES
         set val(expressionType), file("${expressionType}/matrix.mtx.gz") into MTX_MATRIX_CONTENT
-        set val(expressionType), file("${expressionType}") into MTX_MATRICES_FOR_SUMMARY
+        set val(expressionType), file("${expressionType}_dir") into MTX_MATRICES_FOR_SUMMARY
         
 
     """
@@ -438,6 +438,8 @@ process repackage_matrices {
         gzip ${expressionType}/matrix.mtx
         gzip ${expressionType}/genes.tsv
         gzip ${expressionType}/barcodes.tsv
+
+        ln -s ${expressionType} ${expressionType}_dir
     """        
 }
 
@@ -720,9 +722,9 @@ process bundle_summary {
     fi
 
     for matrix_type in filtered_normalised tpm_filtered; do
-        if [ -d \$matrix_type ]; then
+        if [ -d \${matrix_type}_dir ]; then
             makeMarkerStats.R \
-                --counts-dir=\$matrix_type \
+                --counts-dir=\${matrix_type}_dir \
                 --clusters-file=${clusters} \
                 --cluster-markers-dir=\$(pwd) \
                 --cellgroups-file=${cellMeta} \$celltype_markers_opt \
