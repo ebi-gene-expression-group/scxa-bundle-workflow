@@ -98,6 +98,7 @@ colnames(clusters) <- as.character(ks)
 
 if ((! is.na(opt$celltype_markers_file)) && (! is.na(opt$cellgroups_file)) && (! is.na(opt$celltype_fields))){
   cellgroups <- fread(opt$cellgroups_file, select = c('id', unlist(strsplit(opt$celltype_fields, ','))))
+  colnames(cellgroups) <- gsub('_', ' ', colnames(cellgroups))
   for (cg in names(cellgroups)[-1]){
     cellgroups[[cg]] <- sub('^$', 'None', cellgroups[[cg]])
   }
