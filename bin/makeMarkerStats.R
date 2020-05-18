@@ -145,7 +145,7 @@ marker_files <- structure(cluster_marker_files[order(as.numeric(k_vals))], names
 
 if (! is.na(opt$celltype_markers_file)){
   print("Cell type markers present...")
-  marker_files['inferred_cell_type'] <- opt$celltype_markers_file
+  marker_files['inferred cell type'] <- opt$celltype_markers_file
 }
 
 cluster_markers <- do.call(rbind, lapply(names(marker_files), function(x) cbind(variable = x, fread(marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
