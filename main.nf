@@ -699,6 +699,10 @@ process bundle_summary {
     
     conda "${workflow.projectDir}/envs/bundle-summary.yml"
     
+    memory { 4.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 ? 'retry' : 'finish' }
+    maxRetries 10
+    
     input:
        file("*") from MTX_MATRICES_FOR_SUMMARY.map{r -> r[1]}.collect() 
        file("*") from ALL_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
