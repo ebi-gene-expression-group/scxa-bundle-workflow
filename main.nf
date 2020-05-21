@@ -38,8 +38,8 @@ if (isDroplet && isSmart){
 // See what other inputs are provided
 
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
-REFERENCE_FASTA = Channel.fromPath( "${params.referenceFasta}", checkIfExists: true ).first()
-REFERENCE_GTF = Channel.fromPath( "${params.referenceGtf}", checkIfExists: true ).first()
+REFERENCE_FASTA = Channel.fromPath( "$resultsRoot/${params.referenceFasta}", checkIfExists: true ).first()
+REFERENCE_GTF = Channel.fromPath( "$resultsRoot/${params.referenceGtf}", checkIfExists: true ).first()
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
@@ -92,6 +92,8 @@ RAW_TPM_MATRIX.into{
 // Make manifest lines for references
 
 process reference_manifest_lines {
+
+    executor 'local'
 
     input:
         file(referenceFasta) from REFERENCE_FASTA
@@ -311,6 +313,8 @@ process finalise_software {
 
 process mark_perplexities {
 
+    executor 'local'
+    
     input:
         file tSNE from SCANPY_TSNE
 
@@ -342,6 +346,8 @@ process tsne_to_tsv {
 // Combine the listing of t-SNE files for the manifest
 
 process tsne_lines {
+
+    executor 'local'
 
     input:
         set val(perplexity), file(embeddings) from TSV_EMBEDDINGS
@@ -533,6 +539,8 @@ BIG_MATRICES
 
 process matrix_lines {
 
+    executor 'local'
+    
     input:
         set val(expressionType), file(matrixRows), file(matrixCols), file(matrixContent), file(tsvMatrix) from MTX_MATRIX_ROWNAMES.join(MTX_MATRIX_COLNAMES_FOR_MANIFEST_LINES).join(MTX_MATRIX_CONTENT).join(TSV_AND_NOTSV_MATRICES)
 
@@ -553,6 +561,10 @@ process matrix_lines {
 
 process renumber_clusters {
     
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    
+    conda "${workflow.projectDir}/envs/r-data.table.yml"
+    
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
@@ -564,15 +576,8 @@ process renumber_clusters {
         file 'clusters_for_bundle.txt' into FINAL_CLUSTERS
 
     """
-        #!/usr/bin/env Rscript
-
-        clusters <- read.delim('possibly_misnumbered_clusters.txt', check.names=FALSE)
-
-        if (min(clusters[,c(-1,-2)]) == 0){
-            clusters[,c(-1,-2)] <- clusters[,c(-1,-2)]+1
-        }
-
-        write.table(clusters, file='clusters_for_bundle.txt', sep="\t", quote=FALSE, row.names = FALSE)
+        renumberClusters.R possibly_misnumbered_clusters.txt clusters_for_bundle.txt.tmp
+        mv clusters_for_bundle.txt.tmp clusters_for_bundle.txt      
     """
 }
 
@@ -580,6 +585,8 @@ process renumber_clusters {
 
 process mark_marker_resolutions {
 
+    executor 'local'
+    
     input:
         file markersFile from SCANPY_MARKERS
 
@@ -587,36 +594,38 @@ process mark_marker_resolutions {
         set stdout, file (markersFile) into MARKERS_BY_RESOLUTION 
 
     """
-       echo $markersFile | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
+       echo $markersFile | grep -o -E '[0-9]+' | tr -d \'\\n\' 
     """
 }
 
 // Convert the marker files to tsv
 
-process renumber_markers_to_tsv {
-    
+process renumber_markers {
+
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
 
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
-    
+
     input:
-        set val(resolution), file(markersFile) from MARKERS_BY_RESOLUTION
+        set val(resolution), file('markers.tsv') from MARKERS_BY_RESOLUTION
 
     output:
-        set val(resolution), file("markers_*.tsv") into TSV_MARKERS
+        set val(resolution), file("markers_${resolution}.tsv") into TSV_MARKERS
 
     """
     #!/usr/bin/env Rscript
 
-    markers <- read.csv('${markersFile}', check.names = FALSE)
+    markers <- read.delim('markers.tsv', check.names = FALSE)
 
-    if (min(markers\$groups) == 0){
+    if ('groups' %in% names(markers) && min(markers\$groups) == 0){
         markers\$groups <- markers\$groups + 1
+    }else if ('cluster' %in% names(markers) && min(markers\$cluster) == 0){
+        markers\$cluster <- markers\$cluster + 1
     }
-
-    write.table(markers, file='markers_${resolution}.tsv', sep="\t", quote=FALSE, row.names=FALSE)
+    dir.create('out', showWarnings = FALSE)
+    write.table(markers, file='markers_${resolution}.tsv', sep="\\t", quote=FALSE, row.names=FALSE)
     """
 }
 
@@ -624,6 +633,8 @@ process renumber_markers_to_tsv {
 
 process markers_lines {
 
+    executor 'local'
+    
     input:
         set val(resolution), file(markersFile) from TSV_MARKERS
 
@@ -693,7 +704,6 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 
         output:
             file "MANIFEST"
-            file(clusters)
 
         """
             cp $startingManifest MANIFEST
