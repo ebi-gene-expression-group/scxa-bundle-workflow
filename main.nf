@@ -51,6 +51,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
     SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.tsv", checkIfExists: true )
+    SCANPY_UMAP = Channel.fromPath( "$resultsRoot/${params.tsneDir}/umap_n_neighbors*.tsv", checkIfExists: true )
     SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.tsv" )
     SCANPY_META_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/*_markers.tsv" )
 }else{
@@ -59,8 +60,18 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     RAW_TPM_MATRIX = Channel.empty()
     SCANPY_CLUSTERS = Channel.empty()
     SCANPY_TSNE = Channel.empty()
+    SCANPY_UMAP = Channel.empty()
     SCANPY_MARKERS = Channel.empty()
 }
+
+// Combine t-SNE and UMAP for consistent processing
+
+SCANPY_TSNE
+    .map{ r -> tuple('tsne', 'perplexity', r) }
+    .concat(SCANPY_UMAP.map{ r -> tuple('umap', 'n_neighbors', r) })
+    .set {SCANPY_DIMRED}
+
+// Don't always have TPM matrices
 
 if ( params.containsKey('tpmMatrix') ){
     RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfExists: true)
@@ -342,39 +353,40 @@ process finalise_software {
 
 // Find out what perplexities are represented by the t-SNE files
 
-process mark_perplexities {
+process mark_dimred_params {
 
     executor 'local'
     
     input:
-        file tSNE from SCANPY_TSNE
+        set val(dimredType), val(param), file(embeddings) from SCANPY_DIMRED
 
     output:
-        set stdout, file (tSNE) into EMBEDDINGS_BY_PERPLEXITY 
+        set val(dimredType), val(param), stdout, file (embeddings) into EMBEDDINGS_BY_PARAMVAL
 
     """
-       echo $tSNE | grep -o -E '[0-9]+' | tr -d \'\\n\'  
+       echo $embeddings | grep -o -E '[0-9]+' | tr -d \'\\n\'  
     """
 }
 
 // Combine the listing of t-SNE files for the manifest
 
-process tsne_lines {
+process dimred_lines {
 
     executor 'local'
     
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
-        set val(perplexity), file('embeddings') from EMBEDDINGS_BY_PERPLEXITY
+        set val(dimredType), val(param), val(paramVal), file('embeddings') from EMBEDDINGS_BY_PARAMVAL
 
     output:
         stdout TSNE_MANIFEST_LINES
-        file("tsne_perplexity_${perplexity}.tsv") 
+        file("${dimredType}_${param}_${paramVal}.tsv") 
 
     """
-    echo -e "tsne_embeddings\ttsne_perplexity_${perplexity}.tsv\t$perplexity"
-    cp embeddings tsne_perplexity_${perplexity}.tsv
+    outFile=${dimredType}_${param}_${paramVal}.tsv
+    echo -e "${dimredType}_embeddings\t\${outFile}\t$paramVal"
+    cp embeddings \$outFile
     """
 }
 
