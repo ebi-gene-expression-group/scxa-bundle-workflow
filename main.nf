@@ -6,6 +6,7 @@ expressionTypes = [ 'raw' ]
 
 resultsRoot = params.resultsRoot
 masterWorkflow = params.masterWorkflow
+expName = params.expName
 tertiarySoftwareReport = 'None'
 
 if ( params.containsKey('tertiaryWorkflow' )){
@@ -40,6 +41,8 @@ if (isDroplet && isSmart){
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
 REFERENCE_FASTA = Channel.fromPath( "$resultsRoot/${params.referenceFasta}", checkIfExists: true ).first()
 REFERENCE_GTF = Channel.fromPath( "$resultsRoot/${params.referenceGtf}", checkIfExists: true ).first()
+CELL_METADATA = Channel.fromPath( "$resultsRoot/${params.cellMetadata}", checkIfExists: true).first()
+CONDENSED_SDRF = Channel.fromPath( "$resultsRoot/${params.condensedSdrf}", checkIfExists: true).first()
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
@@ -47,16 +50,28 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
     NORMALISED_MATRIX = Channel.fromPath( "$resultsRoot/${params.normalisedMatrix}", checkIfExists: true)
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
-    SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.csv", checkIfExists: true )
-    SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.csv" )
+    SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.tsv", checkIfExists: true )
+    SCANPY_UMAP = Channel.fromPath( "$resultsRoot/${params.umapDir}/umap_n_neighbors*.tsv", checkIfExists: true )
+    SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.tsv" )
+    SCANPY_META_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/*_markers.tsv" )
 }else{
     RAW_FILTERED_MATRIX = Channel.empty()
     NORMALISED_MATRIX = Channel.empty()
     RAW_TPM_MATRIX = Channel.empty()
     SCANPY_CLUSTERS = Channel.empty()
     SCANPY_TSNE = Channel.empty()
+    SCANPY_UMAP = Channel.empty()
     SCANPY_MARKERS = Channel.empty()
 }
+
+// Combine t-SNE and UMAP for consistent processing
+
+SCANPY_TSNE
+    .map{ r -> tuple('tsne', 'perplexity', r) }
+    .concat(SCANPY_UMAP.map{ r -> tuple('umap', 'n_neighbors', r) })
+    .set {SCANPY_DIMRED}
+
+// Don't always have TPM matrices
 
 if ( params.containsKey('tpmMatrix') ){
     RAW_TPM_MATRIX = Channel.fromPath( "$resultsRoot/${params.tpmMatrix}", checkIfExists: true)
@@ -89,6 +104,31 @@ RAW_TPM_MATRIX.into{
     RAW_TPM_MATRIX_FOR_TSV
 }
 
+// Make manifest lines for the metadata
+
+process meta_manifest_lines {
+    
+    executor 'local'
+    
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    
+    input:
+        file(cellMeta) from CELL_METADATA
+        file(condensedSdrf) from CONDENSED_SDRF
+
+    output:
+        stdout META_MANIFEST_LINES
+        file("${expName}.condensed-sdrf.tsv")
+        file("${expName}.cell_metadata.tsv")
+
+    """
+    cp -P $condensedSdrf ${expName}.condensed-sdrf.tsv
+    cp -P $cellMeta ${expName}.cell_metadata.tsv
+    echo -e "cell_metadata\t${expName}.cell_metadata.tsv\t"
+    echo -e "condensed_sdrf\t${expName}.condensed-sdrf.tsv\t"
+    """
+}
+
 // Make manifest lines for references
 
 process reference_manifest_lines {
@@ -103,8 +143,8 @@ process reference_manifest_lines {
         stdout REFERENCE_MANIFEST_LINES 
 
     """
-    echo -e "reference_transcriptome\t$referenceFasta\t"
-    echo -e "reference_annotation\t$referenceGtf\t"
+    echo -e "reference_transcriptome\treference/$referenceFasta\t"
+    echo -e "reference_annotation\treference/$referenceGtf\t"
     """
 }
 
@@ -135,6 +175,8 @@ process publish_reference {
 
 process reference_supplementary_lines {
 
+    executor 'local'
+    
     input:
         file(referenceFasta) from REFERENCE_FASTA
         file(referenceGtf) from REFERENCE_GTF
@@ -311,52 +353,40 @@ process finalise_software {
 
 // Find out what perplexities are represented by the t-SNE files
 
-process mark_perplexities {
+process mark_dimred_params {
 
     executor 'local'
     
     input:
-        file tSNE from SCANPY_TSNE
+        set val(dimredType), val(param), file(embeddings) from SCANPY_DIMRED
 
     output:
-        set stdout, file (tSNE) into EMBEDDINGS_BY_PERPLEXITY 
+        set val(dimredType), val(param), stdout, file (embeddings) into EMBEDDINGS_BY_PARAMVAL
 
     """
-       echo $tSNE | grep -o -E '[0-9]+' | tr '\\n' '\\0' 
-    """
-}
-
-// Convert the t-SNE files to tsv
-
-process tsne_to_tsv {
-    
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
-    
-    input:
-        set val(perplexity), file(embeddings) from EMBEDDINGS_BY_PERPLEXITY
-
-    output:
-        set val(perplexity), file ("tsne_*.tsv") into TSV_EMBEDDINGS 
-
-    """
-    cat $embeddings | sed 's/,/\t/g' > tsne_${perplexity}.tsv
+       echo $embeddings | grep -o -E '[0-9]+' | tr -d \'\\n\'  
     """
 }
 
 // Combine the listing of t-SNE files for the manifest
 
-process tsne_lines {
+process dimred_lines {
 
     executor 'local'
-
+    
+    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    
     input:
-        set val(perplexity), file(embeddings) from TSV_EMBEDDINGS
+        set val(dimredType), val(param), val(paramVal), file('embeddings') from EMBEDDINGS_BY_PARAMVAL
 
     output:
-        stdout TSNE_MANIFEST_LINES 
+        stdout TSNE_MANIFEST_LINES
+        file("${dimredType}_${param}_${paramVal}.tsv") 
 
     """
-    echo -e "tnse_embeddings\t${embeddings}\t$perplexity"
+    outFile=${dimredType}_${param}_${paramVal}.tsv
+    echo -e "${dimredType}_embeddings\t\${outFile}\t$paramVal"
+    cp embeddings \$outFile
     """
 }
 
@@ -390,6 +420,12 @@ process repackage_matrices {
 
     publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
     
+    conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
+   
+    memory { 5.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
+    maxRetries 20
+ 
     input:
         set file(expressionMatrix), val(expressionType) from MATRICES_TO_REPACKAGE
 
@@ -397,7 +433,8 @@ process repackage_matrices {
         set val(expressionType), file("${expressionType}/genes.tsv.gz") into MTX_MATRIX_ROWNAMES
         set val(expressionType), file("${expressionType}/barcodes.tsv.gz") into MTX_MATRIX_COLNAMES
         set val(expressionType), file("${expressionType}/matrix.mtx.gz") into MTX_MATRIX_CONTENT
-
+        set val(expressionType), file("${expressionType}_dir") into MTX_MATRICES_FOR_SUMMARY
+        
 
     """
         zipdir=\$(unzip -qql ${expressionMatrix.getBaseName()}.zip | head -n1 | tr -s ' ' | cut -d' ' -f5- | sed 's|/||')
@@ -406,12 +443,16 @@ process repackage_matrices {
         if [ "\$zipdir" != ${expressionType} ]; then
             ln -s \$zipdir ${expressionType}            
         fi
+
+        mv ${expressionType} ${expressionType}_tmp
+        reorder.R ${expressionType}_tmp ${expressionType}     
  
         gzip ${expressionType}/matrix.mtx
         gzip ${expressionType}/genes.tsv
         gzip ${expressionType}/barcodes.tsv
-    """        
 
+        ln -s ${expressionType} ${expressionType}_dir
+    """        
 }
 
 // Make cell - library mappings for droplet experiments 
@@ -495,6 +536,8 @@ MATRICES_FOR_TSV_WITH_COUNT
 
 process mtx_to_tsv {
     
+    cache 'lenient'
+    
     conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
 
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
@@ -538,6 +581,8 @@ BIG_MATRICES
 // Make manifest lines for matrices
 
 process matrix_lines {
+    
+    executor 'local'
 
     executor 'local'
     
@@ -581,6 +626,11 @@ process renumber_clusters {
     """
 }
 
+FINAL_CLUSTERS.into{
+    FINAL_CLUSTERS_FOR_MANIFEST
+    FINAL_CLUSTERS_FOR_SUMMARY
+}
+
 // Find out what resolutions are represented by the marker files
 
 process mark_marker_resolutions {
@@ -588,31 +638,50 @@ process mark_marker_resolutions {
     executor 'local'
     
     input:
-        file markersFile from SCANPY_MARKERS
+        file markersFile from SCANPY_CLUSTER_MARKERS
 
     output:
-        set stdout, file (markersFile) into MARKERS_BY_RESOLUTION 
+        set stdout, file (markersFile) into CLUSTER_MARKERS_BY_RESOLUTION 
 
     """
-       echo $markersFile | grep -o -E '[0-9]+' | tr -d \'\\n\' 
+        echo $markersFile | grep -o -E '[0-9]+' | tr -d \'\\n\' 
+    """
+}
+
+// Find out what resolutions are represented by the marker files
+
+process mark_marker_meta {
+
+    executor 'local'
+    
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    
+    input:
+        file markersFile from SCANPY_META_MARKERS
+
+    output:
+        set val('meta_markers'), stdout, file (markersFile) into META_MARKERS_BY_VAR 
+
+    """
+        echo "$markersFile" | rev | cut -d"_" -f2-  | rev | tr -d \'\\n\' 
     """
 }
 
 // Convert the marker files to tsv
 
 process renumber_markers {
-
-    publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
+    
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
 
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
 
     input:
-        set val(resolution), file('markers.tsv') from MARKERS_BY_RESOLUTION
+        set val(resolution), file('markers.tsv') from CLUSTER_MARKERS_BY_RESOLUTION
 
     output:
-        set val(resolution), file("markers_${resolution}.tsv") into TSV_MARKERS
+        set val('cluster_markers'), val(resolution), file("markers_${resolution}.tsv") into RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION
 
     """
     #!/usr/bin/env Rscript
@@ -631,18 +700,80 @@ process renumber_markers {
 
 // Combine the listing of markers files for the manifest
 
+RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR).into{
+    ALL_MARKERS_FOR_MANIFEST
+    ALL_MARKERS_FOR_SUMMARY
+}
+
+// Make a summary file to be used in lieu of the old materialised view
+
+process bundle_summary {
+
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    
+    conda "${workflow.projectDir}/envs/bundle-summary.yml"
+    
+    memory { 4.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 ? 'retry' : 'finish' }
+    maxRetries 10
+    
+    input:
+       file("*") from MTX_MATRICES_FOR_SUMMARY.map{r -> r[1]}.collect() 
+       file("*") from ALL_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
+       file clusters from FINAL_CLUSTERS_FOR_SUMMARY
+       file cellMeta from CELL_METADATA
+
+    output:
+        set val('filtered_normalised'), file('filtered_normalised_stats.csv') into BUNDLE_SUMMARY
+        set val('tpm_filtered'), file('tpm_filtered_stats.csv') optional true into BUNDLE_SUMMARY_TPM
+
+    """
+    celltype_markers_opt=
+    if [ -e 'celltype_markers.tsv' ]; then
+        celltype_markers_opt='--celltype-markers-file=celltype_markers.tsv'
+    fi
+
+    for matrix_type in filtered_normalised tpm_filtered; do
+        if [ -d \${matrix_type}_dir ]; then
+            makeMarkerStats.R \
+                --counts-dir=\${matrix_type}_dir \
+                --clusters-file=${clusters} \
+                --cluster-markers-dir=\$(pwd) \
+                --cellgroups-file=${cellMeta} \$celltype_markers_opt \
+                --select-top=${params.topmarkersForSummary} \
+                --output-file=\${matrix_type}_stats.csv
+        fi
+    done
+    """
+}
+
+process bundle_summary_lines{
+    
+    executor 'local'
+
+    input:
+        set val(matrixType), file(markerStats) from BUNDLE_SUMMARY.concat(BUNDLE_SUMMARY_TPM)
+
+    output:
+        stdout SUMMARY_MANIFEST_LINES
+
+    """
+    echo -e "marker_stats\t${markerStats}\t$matrixType"
+    """
+}
+
 process markers_lines {
 
     executor 'local'
     
     input:
-        set val(resolution), file(markersFile) from TSV_MARKERS
+        set val(markerType), val(markerVal), file(markersFile) from ALL_MARKERS_FOR_MANIFEST
 
     output:
         stdout MARKER_MANIFEST_LINES 
 
     """
-    echo -e "cluster_markers\t${markersFile}\t$resolution"
+    echo -e "$markerType\t${markersFile}\t$markerVal"
     """
 }
 
@@ -660,14 +791,21 @@ MARKER_MANIFEST_LINES
     .collectFile(name: 'markers.txt',  newLine: false, sort: true )
     .set{ MARKER_MANIFEST_CONTENT }
 
+SUMMARY_MANIFEST_LINES
+    .collectFile(name: 'summaries.txt',  newLine: false, sort: true )
+    .set{ SUMMARY_MANIFEST_CONTENT }
+
 // Build the manifest from collected components
 
 process base_manifest {
 
+    executor 'local'
+    
     input:
         file matrices from MATRIX_MANIFEST_CONTENT
         file software from SOFTWARE_FOR_MANIFEST 
         file reference from REFERENCE_MANIFEST_LINES
+        file meta from META_MANIFEST_LINES
 
     output:
         file "BASE_MANIFEST" into BASE_MANIFEST
@@ -676,6 +814,7 @@ process base_manifest {
         echo -e "Description\tFile\tParameterisation" > BASE_MANIFEST
         echo -e "software_versions_file\t\$(basename ${software})\t" >> BASE_MANIFEST
         cat ${matrices} >> BASE_MANIFEST
+        cat ${meta} >> BASE_MANIFEST
         cat ${reference} >> BASE_MANIFEST
         echo -e protocol\t\t${params.protocolList} >> BASE_MANIFEST
     """
@@ -691,16 +830,19 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     BASE_MANIFEST
         .concat(TSNE_MANIFEST_CONTENT)
         .concat(MARKER_MANIFEST_CONTENT)
+        .concat(SUMMARY_MANIFEST_CONTENT)
         .collectFile(name: 'manifest_lines.tsv', newLine: false, sort: 'index' )
         .set { STARTING_MANIFEST }
 
     process tertiary_manifest {
+    
+        executor 'local'
 
         publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
         
         input:
             file startingManifest from STARTING_MANIFEST
-            file clusters from FINAL_CLUSTERS
+            file clusters from FINAL_CLUSTERS_FOR_MANIFEST
 
         output:
             file "MANIFEST"
@@ -714,6 +856,8 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
 }else{
 
     process publish_manifest {
+    
+        executor 'local'
         
         publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
         
