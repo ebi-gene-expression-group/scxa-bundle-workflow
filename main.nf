@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-dropletProtocols = [ '10xv1', '10xv1a', '10xv1i', '10xv2', '10xv3', 'drop-seq' ]
+dropletProtocols = [ '10xv1', '10xv1a', '10xv1i', '10xv2', '10xv3', 'drop-seq', 'seq-well' ]
 smartProtocols = [ 'smart-seq', 'smart-seq2', 'smarter', 'smart-like' ]
 expressionTypes = [ 'raw' ]
 
