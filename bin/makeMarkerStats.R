@@ -46,11 +46,11 @@ option_list = list(
     help = "Field name(s) (comma separated if multiple) in the cell type file from which cell type groupings can be derived"
   ),
   make_option(
-    c("-y", "--celltype-markers-file"),
+    c("-y", "--celltype-markers-files"),
     action = "store",
     default = NA,
     type = 'character',
-    help = "A file containing cell type marker statistics, to be included with the processing of the cluster markers"
+    help = "File(s) (comma separated if multiple, in same order as celltype-fields) containing cell type marker statistics, to be included with the processing of the cluster markers"
   ),
   make_option(
     c("-s", "--select-top"),
@@ -69,7 +69,6 @@ option_list = list(
 )
 
 opt <- parse_args(OptionParser(option_list = option_list), convert_hyphens_to_underscores = TRUE)
-saveRDS(opt, file = "opt.rds")
 
 # Argument checking
 
@@ -96,8 +95,10 @@ colnames(clusters) <- as.character(ks)
 
 # Add other cell groupings, where provided
 
-if ((! is.na(opt$celltype_markers_file)) && (! is.na(opt$cellgroups_file)) && (! is.na(opt$celltype_fields))){
-  cellgroups <- fread(opt$cellgroups_file, select = c('id', unlist(strsplit(opt$celltype_fields, ','))))
+if ((! is.na(opt$celltype_markers_files)) && (! is.na(opt$cellgroups_file)) && (! is.na(opt$celltype_fields))){
+  opt$celltype_fields <- unlist(strsplit(opt$celltype_fields, ','))
+
+  cellgroups <- fread(opt$cellgroups_file, select = c('id', opt$celltype_fields))
   colnames(cellgroups) <- gsub('_', ' ', colnames(cellgroups))
   for (cg in names(cellgroups)[-1]){
     cellgroups[[cg]] <- sub('^$', 'None', cellgroups[[cg]])
@@ -144,9 +145,14 @@ marker_files <- structure(cluster_marker_files[order(as.numeric(k_vals))], names
 
 # Add in cell markers where provided
 
-if (! is.na(opt$celltype_markers_file)){
+if (! is.na(opt$celltype_markers_files)){
   print("Cell type markers present...")
-  marker_files['inferred cell type'] <- opt$celltype_markers_file
+  celltype_markers_files <- unlist(strsplit(opt$celltype_markers_files, ','))
+  if ( length(celltype_markers_files) != length(opt$celltype_fields)){
+    write(paste0("Number of markers files supplied (", length(celltype_markers_files), ') does not match number of cell type fields supplied (', length(opt$celltype_fields), ')'), stderr())
+    q(status = 1) 
+  } 
+  marker_files <- c(marker_files, structure(celltype_markers_files, names = gsub('_', ' ', opt$celltype_fields)))
 }
 
 cluster_markers <- do.call(rbind, lapply(names(marker_files), function(x) cbind(variable = x, fread(marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
@@ -205,7 +211,8 @@ cluster_stats$key <- paste(cluster_stats$grouping_where_marker, cluster_stats$ge
 cluster_markers$key <- paste(cluster_markers$grouping_where_marker, cluster_markers$gene_id)
 
 if (! all(cluster_markers$key %in% cluster_stats$key)){
-  write("Not all clusters and genes have summary stats", stderr())
+  missing <- cluster_markers$key[! cluster_markers$key %in%  cluster_stats$key]
+  write(paste("Not all clusters and genes have summary stats, missing:",paste(missing, collapse=',')), stderr())
   q(status = 1)
 }
 
