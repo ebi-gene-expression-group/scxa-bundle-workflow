@@ -739,6 +739,7 @@ process bundle_summary {
                 --counts-dir=\${matrix_type}_dir \
                 --clusters-file=${clusters} \
                 --cluster-markers-dir=\$(pwd) \
+                --celltype-fields=${params.cellTypeField} \
                 --cellgroups-file=${cellMeta} \$celltype_markers_opt \
                 --select-top=${params.topmarkersForSummary} \
                 --output-file=\${matrix_type}_stats.csv
