@@ -43,6 +43,7 @@ REFERENCE_FASTA = Channel.fromPath( "$resultsRoot/${params.referenceFasta}", che
 REFERENCE_GTF = Channel.fromPath( "$resultsRoot/${params.referenceGtf}", checkIfExists: true ).first()
 CELL_METADATA = Channel.fromPath( "$resultsRoot/${params.cellMetadata}", checkIfExists: true).first()
 CONDENSED_SDRF = Channel.fromPath( "$resultsRoot/${params.condensedSdrf}", checkIfExists: true).first()
+PROJECT_FILE = Channel.fromPath( "$resultsRoot/${params.projectFile}", checkIfExists: true).first()
 
 if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
@@ -115,17 +116,21 @@ process meta_manifest_lines {
     input:
         file(cellMeta) from CELL_METADATA
         file(condensedSdrf) from CONDENSED_SDRF
+        file(projectFile) from PROJECT_FILE
 
     output:
         stdout META_MANIFEST_LINES
         file("${expName}.condensed-sdrf.tsv")
         file("${expName}.cell_metadata.tsv")
+        file("${expName}.project.h5ad")
 
     """
     cp -P $condensedSdrf ${expName}.condensed-sdrf.tsv
     cp -P $cellMeta ${expName}.cell_metadata.tsv
+    cp -P $projectFile ${expName}.project.h5ad
     echo -e "cell_metadata\t${expName}.cell_metadata.tsv\t"
     echo -e "condensed_sdrf\t${expName}.condensed-sdrf.tsv\t"
+    echo -e "project_file\t${expName}.project.h5ad\t"
     """
 }
 
