@@ -53,8 +53,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
     SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.tsv", checkIfExists: true )
     SCANPY_UMAP = Channel.fromPath( "$resultsRoot/${params.umapDir}/umap_n_neighbors*.tsv", checkIfExists: true )
-    SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.tsv" )
-    SCANPY_META_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/*_markers.tsv" )
+    SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.tsv" )
 }else{
     RAW_FILTERED_MATRIX = Channel.empty()
     NORMALISED_MATRIX = Channel.empty()
@@ -638,37 +637,26 @@ FINAL_CLUSTERS.into{
 
 // Find out what resolutions are represented by the marker files
 
-process mark_marker_resolutions {
+process mark_marker_param {
 
     executor 'local'
     
     input:
-        file markersFile from SCANPY_CLUSTER_MARKERS
+        file markersFile from SCANPY_MARKERS
 
     output:
-        set stdout, file (markersFile) into CLUSTER_MARKERS_BY_RESOLUTION 
+        set stdout, file ('cluster_markers.tsv') optional true into CLUSTER_MARKERS_BY_RESOLUTION 
+        set val('meta_markers'), stdout, file ('meta_markers.tsv') optional true into META_MARKERS_BY_VAR 
 
     """
-        echo $markersFile | grep -o -E '[0-9]+' | tr -d \'\\n\' 
-    """
-}
-
-// Find out what resolutions are represented by the marker files
-
-process mark_marker_meta {
-
-    executor 'local'
-    
-    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
-    
-    input:
-        file markersFile from SCANPY_META_MARKERS
-
-    output:
-        set val('meta_markers'), stdout, file (markersFile) into META_MARKERS_BY_VAR 
-
-    """
-        echo "$markersFile" | rev | cut -d"_" -f2-  | rev | tr -d \'\\n\' 
+        cellgroup_name=\$(echo $markersFile | sed 's/markers_//g' | sed 's/.tsv//g')
+        echo "\$cellgroup_name" | grep -o -E '[0-9]+' > /dev/null
+        if [ \$? -eq 0 ]; then
+            cp -P $markersFile cluster_markers.tsv
+        else
+            cp -P $markersFile meta_markers.tsv
+            
+        fi
     """
 }
 
@@ -676,8 +664,6 @@ process mark_marker_meta {
 
 process renumber_markers {
     
-    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
-
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
@@ -703,9 +689,25 @@ process renumber_markers {
     """
 }
 
-// Combine the listing of markers files for the manifest
+// Publish and combine the listing of markers files for the manifest
 
-RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR).into{
+process publish_markers {
+    
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    executor 'local'
+
+    input:
+        set val(markerType), val(param), file ('markers.tsv') from RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR)
+    
+    output:
+        set val(markerType), val(param), file("markers_${param}.tsv") into ALL_MARKERS
+
+    """
+    cp -P markers.tsv "markers_${param}.tsv"
+    """
+}
+
+ALL_MARKERS.into{
     ALL_MARKERS_FOR_MANIFEST
     ALL_MARKERS_FOR_SUMMARY
 }
