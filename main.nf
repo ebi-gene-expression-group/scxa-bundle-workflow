@@ -660,6 +660,11 @@ process mark_marker_param {
     """
 }
 
+META_MARKERS_BY_VAR.into{
+    META_MARKERS_FOR_SUMMARY
+    META_MARKERS_FOR_BUNDLE
+}
+
 // Convert the marker files to tsv
 
 process renumber_markers {
@@ -689,6 +694,11 @@ process renumber_markers {
     """
 }
 
+RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.into{
+    CLUSTER_MARKERS_FOR_SUMMARY
+    CLUSTER_MARKERS_FOR_BUNDLE
+}
+
 // Publish and combine the listing of markers files for the manifest
 
 process publish_markers {
@@ -697,7 +707,7 @@ process publish_markers {
     executor 'local'
 
     input:
-        set val(markerType), val(param), file ('markers.tsv') from RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR)
+        set val(markerType), val(param), file ('markers.tsv') from CLUSTER_MARKERS_FOR_BUNDLE.concat(META_MARKERS_FOR_BUNDLE)
     
     output:
         set val(markerType), val(param), file("markers_${param}.tsv") into ALL_MARKERS
@@ -705,11 +715,6 @@ process publish_markers {
     """
     cp -P markers.tsv "markers_${param}.tsv"
     """
-}
-
-ALL_MARKERS.into{
-    ALL_MARKERS_FOR_MANIFEST
-    ALL_MARKERS_FOR_SUMMARY
 }
 
 // Make a summary file to be used in lieu of the old materialised view
@@ -726,7 +731,8 @@ process bundle_summary {
     
     input:
        file("*") from MTX_MATRICES_FOR_SUMMARY.map{r -> r[1]}.collect() 
-       file("*") from ALL_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
+       file("cluster_markers/*") from CLUSTER_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
+       file("meta_markers/*") from META_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
        file clusters from FINAL_CLUSTERS_FOR_SUMMARY
        file cellMeta from CELL_METADATA
 
@@ -735,19 +741,14 @@ process bundle_summary {
         set val('tpm_filtered'), file('tpm_filtered_stats.csv') optional true into BUNDLE_SUMMARY_TPM
 
     """
-    celltype_markers_opt=
-    if [ -e '${params.cellTypeField}_markers.tsv' ]; then
-        celltype_markers_opt='--celltype-markers-file=${params.cellTypeField}_markers.tsv'
-    fi
-
     for matrix_type in filtered_normalised tpm_filtered; do
         if [ -d \${matrix_type}_dir ]; then
             makeMarkerStats.R \
                 --counts-dir=\${matrix_type}_dir \
                 --clusters-file=${clusters} \
-                --cluster-markers-dir=\$(pwd) \
-                --celltype-fields=${params.cellTypeField} \
-                --cellgroups-file=${cellMeta} \$celltype_markers_opt \
+                --cluster-markers-dir=cluster_markers \
+                --meta-markers-dir=meta_markers \
+                --cellgroups-file=${cellMeta} \
                 --select-top=${params.topmarkersForSummary} \
                 --output-file=\${matrix_type}_stats.csv
         fi
@@ -775,7 +776,7 @@ process markers_lines {
     executor 'local'
     
     input:
-        set val(markerType), val(markerVal), file(markersFile) from ALL_MARKERS_FOR_MANIFEST
+        set val(markerType), val(markerVal), file(markersFile) from ALL_MARKERS
 
     output:
         stdout MARKER_MANIFEST_LINES 
