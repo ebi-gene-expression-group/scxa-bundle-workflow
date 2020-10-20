@@ -169,7 +169,7 @@ if (length(all_markers_files) == 0){
     q(status = 1) 
 }
 
-cluster_markers <- do.call(rbind, lapply(names(marker_files), function(x) cbind(variable = x, fread(marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
+cluster_markers <- do.call(rbind, lapply(names(all_marker_files), function(x) cbind(variable = x, fread(all_marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
 cluster_markers$cluster <- sub('^nan$', 'None', cluster_markers$cluster)
 
 # Rank by padj within each clustering (and filter)
