@@ -164,7 +164,7 @@ all_marker_files <- unlist(lapply(c('cluster', 'meta'), function(markerType){
     }
 }))
 
-if (length(all_markers_files) == 0){
+if (length(all_marker_files) == 0){
     write('Found no valid marker files', stderr())
     q(status = 1) 
 }
