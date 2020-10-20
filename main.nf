@@ -655,8 +655,8 @@ process mark_marker_param {
             cp -P $markersFile cluster_markers.tsv
         else
             cp -P $markersFile meta_markers.tsv
-            
         fi
+        echo -n $cellgroup_name
     """
 }
 
