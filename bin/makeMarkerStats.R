@@ -39,7 +39,7 @@ option_list = list(
     help = "Directory path in which to find metadata marker files as downloaded from a Scanpy workflow with scanpy-scripts"
   ),
   make_option(
-    c("-m", "--meta-markers-file-pattern"),
+    c("-n", "--meta-markers-file-pattern"),
     action = "store",
     default = "markers_*.tsv",
     type = 'character',
@@ -120,44 +120,54 @@ colnames(counts) <- colData(counts)$Barcode
 # Now read in the markers
 
 print("Loading markers...")
-marker_files <- unlist(lapply(c('cluster', 'meta'), function(markerType){
+all_marker_files <- unlist(lapply(c('cluster', 'meta'), function(markerType){
     
     if (! is.na(opt[[paste0(markerType, '_markers_dir')]])){
-        marker_files <- list.files(path = paste0(markerType, '_markers_dir'), pattern = basename(paste0(markerType, '_markers_file_pattern')), full.names = TRUE)
-        marker_cell_groupings <- sub('markers_(.+).tsv', '\\1', basename(marker_files))
-
-        # Load metadata groupings and subset to those relevant in markers 
+        marker_files <- list.files(path = paste0(markerType, '_markers'), pattern = opt[[paste0(markerType, '_markers_file_pattern')]], full.names = TRUE)
         
-        if (markerType == 'meta'){
-            if ((! is.na(opt$cellgroups_file))){
-              cellgroups <- fread(opt$cellgroups_file)
-              colnames(cellgroups) <- gsub('_', ' ', colnames(cellgroups))
-              for (cg in names(cellgroups)[-1]){
-                cellgroups[[cg]] <- sub('^$', 'None', cellgroups[[cg]])
-              }
-              cellgroups <- cellgroups[, c('id', colnames(cellgroups) %in% marker_cell_groupings), drop = FALSE]
-              clusters <- merge(clusters, cellgroups, by.x = 'row.names', by.y = 'id', all.x = TRUE, sort = FALSE)
-              rownames(clusters) <- clusters$Row.names
-              clusters <- clusters[,-1]
+        if (length(marker_files) > 0){
+
+            marker_cell_groupings <- sub('markers_(.+).tsv', '\\1', basename(marker_files))
+
+            # Load metadata groupings and subset to those relevant in markers 
+            
+            if (markerType == 'meta'){
+                if ((! is.na(opt$cellgroups_file))){
+                  cellgroups <- fread(opt$cellgroups_file)
+                  colnames(cellgroups) <- gsub('_', ' ', colnames(cellgroups))
+                  for (cg in names(cellgroups)[-1]){
+                    cellgroups[[cg]] <- sub('^$', 'None', cellgroups[[cg]])
+                  }
+                  cellgroups <- cellgroups[, c('id', colnames(cellgroups) %in% marker_cell_groupings), drop = FALSE]
+                  clusters <- merge(clusters, cellgroups, by.x = 'row.names', by.y = 'id', all.x = TRUE, sort = FALSE)
+                  rownames(clusters) <- clusters$Row.names
+                  clusters <- clusters[,-1]
+                }
             }
-        }
 
-        missing <- marker_cell_groupings[! marker_cell_groupings %in% colnames(clusters)]
-        if (length(missing) > 0){
-            write(paste('Marker file for', paste(missing, collapse=', '), 'missing its cell groups/ clusters'), stderr())
-            q(status = 1)
-        }
+            missing <- marker_cell_groupings[! marker_cell_groupings %in% colnames(clusters)]
+            if (length(missing) > 0){
+                write(paste('Marker file for', paste(missing, collapse=', '), 'missing its cell groups/ clusters'), stderr())
+                q(status = 1)
+            }
 
-        marker_files <- structure(marker_files, names = marker_cell_groupings)
-        if (markerType == 'cluster'){
-            marker_files <- marker_files[order(as.numeric(names(marker_files)))]
+            marker_files <- structure(marker_files, names = marker_cell_groupings)
+            if (markerType == 'cluster'){
+                marker_files <- marker_files[order(as.numeric(names(marker_files)))]
+            }
+            marker_files
+        }else{
+            NULL
         }
-        marker_files
     }else{
         NULL
     }
-
 }))
+
+if (length(all_markers_files) == 0){
+    write('Found no valid marker files', stderr())
+    q(status = 1) 
+}
 
 cluster_markers <- do.call(rbind, lapply(names(marker_files), function(x) cbind(variable = x, fread(marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
 cluster_markers$cluster <- sub('^nan$', 'None', cluster_markers$cluster)
