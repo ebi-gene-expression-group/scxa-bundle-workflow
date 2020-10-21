@@ -32,25 +32,25 @@ option_list = list(
     help = "A pattern used to match marker files as downloaded from a Scanpy workflow with scanpy-scripts"
   ),
   make_option(
+    c("-y", "--meta-markers-dir"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = "Directory path in which to find metadata marker files as downloaded from a Scanpy workflow with scanpy-scripts"
+  ),
+  make_option(
+    c("-n", "--meta-markers-file-pattern"),
+    action = "store",
+    default = "markers_.*.tsv",
+    type = 'character',
+    help = "A pattern used to match marker files as downloaded from a Scanpy workflow with scanpy-scripts"
+  ),
+  make_option(
     c("-g", "--cellgroups-file"),
     action = "store",
     default = NA,
     type = 'character',
     help = "A tabular file in which additional cell groups column can be found"
-  ),
-  make_option(
-    c("-f", "--celltype-fields"),
-    action = "store",
-    default = 'inferred_cell_type',
-    type = 'character',
-    help = "Field name(s) (comma separated if multiple) in the cell type file from which cell type groupings can be derived"
-  ),
-  make_option(
-    c("-y", "--celltype-markers-files"),
-    action = "store",
-    default = NA,
-    type = 'character',
-    help = "File(s) (comma separated if multiple, in same order as celltype-fields) containing cell type marker statistics, to be included with the processing of the cluster markers"
   ),
   make_option(
     c("-s", "--select-top"),
@@ -93,22 +93,6 @@ ks <- clusters$K
 clusters <- t(clusters[,c(-1,-2)])
 colnames(clusters) <- as.character(ks)
 
-# Add other cell groupings, where provided
-
-if ((! is.na(opt$celltype_markers_files)) && (! is.na(opt$cellgroups_file)) && (! is.na(opt$celltype_fields))){
-  opt$celltype_fields <- unlist(strsplit(opt$celltype_fields, ','))
-
-  cellgroups <- fread(opt$cellgroups_file, select = c('id', opt$celltype_fields))
-  colnames(cellgroups) <- gsub('_', ' ', colnames(cellgroups))
-  for (cg in names(cellgroups)[-1]){
-    cellgroups[[cg]] <- sub('^$', 'None', cellgroups[[cg]])
-  }
-  
-  clusters <- merge(clusters, cellgroups, by.x = 'row.names', by.y = 'id', all.x = TRUE, sort = FALSE)
-  rownames(clusters) <- clusters$Row.names
-  clusters <- clusters[,-1]
-}
-
 # Read the count-based expression values
 
 # (first check if we need to gunzip)
@@ -136,26 +120,61 @@ colnames(counts) <- colData(counts)$Barcode
 # Now read in the markers
 
 print("Loading markers...")
-cluster_marker_files <- list.files(path = opt$cluster_markers_dir, pattern = basename(opt$cluster_markers_file_pattern), full.names = TRUE)
+all_marker_files <- unlist(lapply(c('cluster', 'meta'), function(markerType){
+    
+    if (! is.na(opt[[paste0(markerType, '_markers_dir')]])){
+        marker_files <- list.files(path = paste0(markerType, '_markers'), pattern = opt[[paste0(markerType, '_markers_file_pattern')]], full.names = TRUE)
+        
+        if (length(marker_files) > 0){
 
-# Order cluster markers by k 
+            marker_cell_groupings <- gsub('_', ' ', sub('markers_(.+).tsv', '\\1', basename(marker_files)))
 
-k_vals <- sub('markers_([0-9]+).tsv', '\\1', basename(cluster_marker_files))
-marker_files <- structure(cluster_marker_files[order(as.numeric(k_vals))], names = sort(as.numeric(k_vals)))
+            # Load metadata groupings and subset to those relevant in markers 
+            
+            if (markerType == 'meta'){
+                if ((! is.na(opt$cellgroups_file))){
+                  cellgroups <- fread(opt$cellgroups_file)
+                  colnames(cellgroups) <- gsub('_', ' ', colnames(cellgroups))
+                  for (cg in names(cellgroups)[-1]){
+                    cellgroups[[cg]] <- sub('^$', 'None', cellgroups[[cg]])
+                  }
+                  if (any(! marker_cell_groupings %in% colnames(cellgroups))){
+                    write(paste("Can't find cell groups annotations for all of fields", paste(marker_cell_groupings, collapse=', '), 'available fields are:', paste(colnames(cellgroups), collapse=',')), stderr())
+                    q(status = 1)
+                  }
 
-# Add in cell markers where provided
+                  cols <- c('id', marker_cell_groupings)
+                  clusters <- merge(clusters, cellgroups[, ..cols], by.x = 'row.names', by.y = 'id', all.x = TRUE, sort = FALSE)
+                  rownames(clusters) <- clusters$Row.names
+                  clusters <<- clusters[,-1]
+                }
+            }
 
-if (! is.na(opt$celltype_markers_files)){
-  print("Cell type markers present...")
-  celltype_markers_files <- unlist(strsplit(opt$celltype_markers_files, ','))
-  if ( length(celltype_markers_files) != length(opt$celltype_fields)){
-    write(paste0("Number of markers files supplied (", length(celltype_markers_files), ') does not match number of cell type fields supplied (', length(opt$celltype_fields), ')'), stderr())
+            missing <- marker_cell_groupings[! marker_cell_groupings %in% colnames(clusters)]
+            if (length(missing) > 0){
+                write(paste('Marker file for', paste(missing, collapse=', '), 'missing its cell groups/ clusters'), stderr())
+                q(status = 1)
+            }
+
+            marker_files <- structure(marker_files, names = marker_cell_groupings)
+            if (markerType == 'cluster'){
+                marker_files <- marker_files[order(as.numeric(names(marker_files)))]
+            }
+            marker_files
+        }else{
+            NULL
+        }
+    }else{
+        NULL
+    }
+}))
+
+if (length(all_marker_files) == 0){
+    write('Found no valid marker files', stderr())
     q(status = 1) 
-  } 
-  marker_files <- c(marker_files, structure(celltype_markers_files, names = gsub('_', ' ', opt$celltype_fields)))
 }
 
-cluster_markers <- do.call(rbind, lapply(names(marker_files), function(x) cbind(variable = x, fread(marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
+cluster_markers <- do.call(rbind, lapply(names(all_marker_files), function(x) cbind(variable = x, fread(all_marker_files[x], select = c('cluster', 'genes', 'pvals_adj'), colClasses = c('character', 'character', 'integer', 'character', 'numeric', 'numeric', 'numeric', 'numeric')))))
 cluster_markers$cluster <- sub('^nan$', 'None', cluster_markers$cluster)
 
 # Rank by padj within each clustering (and filter)

@@ -53,8 +53,7 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy
     SCANPY_CLUSTERS = Channel.fromPath( "$resultsRoot/${params.clusters}", checkIfExists: true)
     SCANPY_TSNE = Channel.fromPath( "$resultsRoot/${params.tsneDir}/tsne_perplexity*.tsv", checkIfExists: true )
     SCANPY_UMAP = Channel.fromPath( "$resultsRoot/${params.umapDir}/umap_n_neighbors*.tsv", checkIfExists: true )
-    SCANPY_CLUSTER_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.tsv" )
-    SCANPY_META_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/*_markers.tsv" )
+    SCANPY_MARKERS = Channel.fromPath( "$resultsRoot/${params.markersDir}/markers_*.tsv" )
 }else{
     RAW_FILTERED_MATRIX = Channel.empty()
     NORMALISED_MATRIX = Channel.empty()
@@ -638,37 +637,28 @@ FINAL_CLUSTERS.into{
 
 // Find out what resolutions are represented by the marker files
 
-process mark_marker_resolutions {
+process mark_marker_param {
 
     executor 'local'
     
     input:
-        file markersFile from SCANPY_CLUSTER_MARKERS
+        file markersFile from SCANPY_MARKERS
 
     output:
-        set stdout, file (markersFile) into CLUSTER_MARKERS_BY_RESOLUTION 
+        set stdout, file ('cluster_markers.tsv') optional true into CLUSTER_MARKERS_BY_RESOLUTION 
+        set stdout, file ('meta_markers.tsv') optional true into META_MARKERS_BY_VAR 
 
     """
-        echo $markersFile | grep -o -E '[0-9]+' | tr -d \'\\n\' 
-    """
-}
-
-// Find out what resolutions are represented by the marker files
-
-process mark_marker_meta {
-
-    executor 'local'
-    
-    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
-    
-    input:
-        file markersFile from SCANPY_META_MARKERS
-
-    output:
-        set val('meta_markers'), stdout, file (markersFile) into META_MARKERS_BY_VAR 
-
-    """
-        echo "$markersFile" | rev | cut -d"_" -f2-  | rev | tr -d \'\\n\' 
+        set +e
+        cellgroup_name=\$(echo $markersFile | sed 's/markers_//g' | sed 's/.tsv//g')
+        echo "\$cellgroup_name" | grep -o -E '[0-9]+' > /dev/null
+        if [ \$? -eq 0 ]; then
+            cp -P $markersFile cluster_markers.tsv
+        else
+            cp -P $markersFile meta_markers.tsv
+            cellgroup_name=\$(echo \$cellgroup_name | sed 's/^meta_//')
+        fi
+        echo -n "\$cellgroup_name"
     """
 }
 
@@ -676,8 +666,6 @@ process mark_marker_meta {
 
 process renumber_markers {
     
-    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
-
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
@@ -703,11 +691,80 @@ process renumber_markers {
     """
 }
 
-// Combine the listing of markers files for the manifest
+RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.into{
+    CLUSTER_MARKERS_FOR_SUMMARY
+    CLUSTER_MARKERS_FOR_BUNDLE
+}
 
-RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.concat(META_MARKERS_BY_VAR).into{
-    ALL_MARKERS_FOR_MANIFEST
-    ALL_MARKERS_FOR_SUMMARY
+// Rename meta markers
+
+process rename_meta_markers{
+
+    executor 'local'
+
+    input:
+        set val(var), file('markers.tsv') from META_MARKERS_BY_VAR
+    
+    output:
+        set val('meta_markers'), val(var), file("markers_${var}.tsv") into RENAMED_META_MARKERS_BY_VAR
+
+    """
+    cp -P markers.tsv markers_${var}.tsv
+    """
+}
+
+RENAMED_META_MARKERS_BY_VAR.into{
+    META_MARKERS_FOR_SUMMARY
+    META_MARKERS_FOR_BUNDLE
+}
+
+process collate_cluster_markers {
+    
+    executor 'local'
+    
+    input:
+        file("cluster_markers_in/*") from CLUSTER_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect()
+
+    output:
+        file("cluster_markers") into COLLATED_CLUSTER_MARKERS
+
+    """
+    ln -s cluster_markers_in cluster_markers
+    """
+}
+
+process collate_meta_markers {
+    
+    executor 'local'
+    
+    input:
+        file("meta_markers_in/*") from META_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect()
+
+    output:
+        file("meta_markers") into COLLATED_META_MARKERS
+
+    """
+    ln -s meta_markers_in meta_markers
+    """
+}
+
+
+// Publish and combine the listing of markers files for the manifest
+
+process publish_markers {
+    
+    publishDir "$resultsRoot/bundle", mode: 'copy', overwrite: true
+    executor 'local'
+
+    input:
+        set val(markerType), val(param), file ('markers.tsv') from CLUSTER_MARKERS_FOR_BUNDLE.concat(META_MARKERS_FOR_BUNDLE)
+    
+    output:
+        set val(markerType), val(param), file("markers_${param}.tsv") into ALL_MARKERS
+
+    """
+    cp -P markers.tsv "markers_${param}.tsv"
+    """
 }
 
 // Make a summary file to be used in lieu of the old materialised view
@@ -724,7 +781,7 @@ process bundle_summary {
     
     input:
        file("*") from MTX_MATRICES_FOR_SUMMARY.map{r -> r[1]}.collect() 
-       file("*") from ALL_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
+       file("*") from COLLATED_CLUSTER_MARKERS.concat(COLLATED_META_MARKERS).collect()
        file clusters from FINAL_CLUSTERS_FOR_SUMMARY
        file cellMeta from CELL_METADATA
 
@@ -733,19 +790,14 @@ process bundle_summary {
         set val('tpm_filtered'), file('tpm_filtered_stats.csv') optional true into BUNDLE_SUMMARY_TPM
 
     """
-    celltype_markers_opt=
-    if [ -e '${params.cellTypeField}_markers.tsv' ]; then
-        celltype_markers_opt='--celltype-markers-file=${params.cellTypeField}_markers.tsv'
-    fi
-
     for matrix_type in filtered_normalised tpm_filtered; do
         if [ -d \${matrix_type}_dir ]; then
             makeMarkerStats.R \
                 --counts-dir=\${matrix_type}_dir \
                 --clusters-file=${clusters} \
-                --cluster-markers-dir=\$(pwd) \
-                --celltype-fields=${params.cellTypeField} \
-                --cellgroups-file=${cellMeta} \$celltype_markers_opt \
+                --cluster-markers-dir=cluster_markers \
+                --meta-markers-dir=meta_markers \
+                --cellgroups-file=${cellMeta} \
                 --select-top=${params.topmarkersForSummary} \
                 --output-file=\${matrix_type}_stats.csv
         fi
@@ -773,7 +825,7 @@ process markers_lines {
     executor 'local'
     
     input:
-        set val(markerType), val(markerVal), file(markersFile) from ALL_MARKERS_FOR_MANIFEST
+        set val(markerType), val(markerVal), file(markersFile) from ALL_MARKERS
 
     output:
         stdout MARKER_MANIFEST_LINES 
