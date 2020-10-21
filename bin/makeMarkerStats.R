@@ -41,7 +41,7 @@ option_list = list(
   make_option(
     c("-n", "--meta-markers-file-pattern"),
     action = "store",
-    default = "markers_*.tsv",
+    default = "markers_.*.tsv",
     type = 'character',
     help = "A pattern used to match marker files as downloaded from a Scanpy workflow with scanpy-scripts"
   ),
@@ -127,7 +127,7 @@ all_marker_files <- unlist(lapply(c('cluster', 'meta'), function(markerType){
         
         if (length(marker_files) > 0){
 
-            marker_cell_groupings <- sub('markers_(.+).tsv', '\\1', basename(marker_files))
+            marker_cell_groupings <- gsub('_', ' ', sub('markers_(.+).tsv', '\\1', basename(marker_files)))
 
             # Load metadata groupings and subset to those relevant in markers 
             
@@ -138,10 +138,15 @@ all_marker_files <- unlist(lapply(c('cluster', 'meta'), function(markerType){
                   for (cg in names(cellgroups)[-1]){
                     cellgroups[[cg]] <- sub('^$', 'None', cellgroups[[cg]])
                   }
-                  cellgroups <- cellgroups[, c('id', colnames(cellgroups) %in% marker_cell_groupings), drop = FALSE]
-                  clusters <- merge(clusters, cellgroups, by.x = 'row.names', by.y = 'id', all.x = TRUE, sort = FALSE)
+                  if (any(! marker_cell_groupings %in% colnames(cellgroups))){
+                    write(paste("Can't find cell groups annotations for all of fields", paste(marker_cell_groupings, collapse=', '), 'available fields are:', paste(colnames(cellgroups), collapse=',')), stderr())
+                    q(status = 1)
+                  }
+
+                  cols <- c('id', marker_cell_groupings)
+                  clusters <- merge(clusters, cellgroups[, ..cols], by.x = 'row.names', by.y = 'id', all.x = TRUE, sort = FALSE)
                   rownames(clusters) <- clusters$Row.names
-                  clusters <- clusters[,-1]
+                  clusters <<- clusters[,-1]
                 }
             }
 

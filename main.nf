@@ -646,23 +646,20 @@ process mark_marker_param {
 
     output:
         set stdout, file ('cluster_markers.tsv') optional true into CLUSTER_MARKERS_BY_RESOLUTION 
-        set val('meta_markers'), stdout, file ('meta_markers.tsv') optional true into META_MARKERS_BY_VAR 
+        set stdout, file ('meta_markers.tsv') optional true into META_MARKERS_BY_VAR 
 
     """
+        set +e
         cellgroup_name=\$(echo $markersFile | sed 's/markers_//g' | sed 's/.tsv//g')
         echo "\$cellgroup_name" | grep -o -E '[0-9]+' > /dev/null
         if [ \$? -eq 0 ]; then
             cp -P $markersFile cluster_markers.tsv
         else
             cp -P $markersFile meta_markers.tsv
+            cellgroup_name=\$(echo \$cellgroup_name | sed 's/^meta_//')
         fi
-        echo -n $cellgroup_name
+        echo -n "\$cellgroup_name"
     """
-}
-
-META_MARKERS_BY_VAR.into{
-    META_MARKERS_FOR_SUMMARY
-    META_MARKERS_FOR_BUNDLE
 }
 
 // Convert the marker files to tsv
@@ -699,6 +696,59 @@ RENUMBERED_CLUSTER_MARKERS_BY_RESOLUTION.into{
     CLUSTER_MARKERS_FOR_BUNDLE
 }
 
+// Rename meta markers
+
+process rename_meta_markers{
+
+    executor 'local'
+
+    input:
+        set val(var), file('markers.tsv') from META_MARKERS_BY_VAR
+    
+    output:
+        set val('meta_markers'), val(var), file("markers_${var}.tsv") into RENAMED_META_MARKERS_BY_VAR
+
+    """
+    cp -P markers.tsv markers_${var}.tsv
+    """
+}
+
+RENAMED_META_MARKERS_BY_VAR.into{
+    META_MARKERS_FOR_SUMMARY
+    META_MARKERS_FOR_BUNDLE
+}
+
+process collate_cluster_markers {
+    
+    executor 'local'
+    
+    input:
+        file("cluster_markers_in/*") from CLUSTER_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect()
+
+    output:
+        file("cluster_markers") into COLLATED_CLUSTER_MARKERS
+
+    """
+    ln -s cluster_markers_in cluster_markers
+    """
+}
+
+process collate_meta_markers {
+    
+    executor 'local'
+    
+    input:
+        file("meta_markers_in/*") from META_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect()
+
+    output:
+        file("meta_markers") into COLLATED_META_MARKERS
+
+    """
+    ln -s meta_markers_in meta_markers
+    """
+}
+
+
 // Publish and combine the listing of markers files for the manifest
 
 process publish_markers {
@@ -731,8 +781,7 @@ process bundle_summary {
     
     input:
        file("*") from MTX_MATRICES_FOR_SUMMARY.map{r -> r[1]}.collect() 
-       file("cluster_markers/*") from CLUSTER_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
-       file("meta_markers/*") from META_MARKERS_FOR_SUMMARY.map{r -> r[2]}.collect() 
+       file("*") from COLLATED_CLUSTER_MARKERS.concat(COLLATED_META_MARKERS).collect()
        file clusters from FINAL_CLUSTERS_FOR_SUMMARY
        file cellMeta from CELL_METADATA
 
