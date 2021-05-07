@@ -666,6 +666,8 @@ process mark_marker_param {
 
 process renumber_markers {
     
+    conda "${workflow.projectDir}/envs/r-data.table.yml"
+    
     memory { 5.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
