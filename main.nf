@@ -41,6 +41,7 @@ if (isDroplet && isSmart){
 RAW_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawMatrix}", checkIfExists: true)
 REFERENCE_FASTA = Channel.fromPath( "$resultsRoot/${params.referenceFasta}", checkIfExists: true ).first()
 REFERENCE_GTF = Channel.fromPath( "$resultsRoot/${params.referenceGtf}", checkIfExists: true ).first()
+GENE_METADATA = Channel.fromPath( "$resultsRoot/${params.geneMetadata}", checkIfExists: true ).first()
 CELL_METADATA = Channel.fromPath( "$resultsRoot/${params.cellMetadata}", checkIfExists: true).first()
 CONDENSED_SDRF = Channel.fromPath( "$resultsRoot/${params.condensedSdrf}", checkIfExists: true).first()
 PROJECT_FILE = Channel.fromPath( "$resultsRoot/${params.projectFile}", checkIfExists: true).first()
@@ -142,6 +143,7 @@ process reference_manifest_lines {
     input:
         file(referenceFasta) from REFERENCE_FASTA
         file(referenceGtf) from REFERENCE_GTF
+        file(geneMetadata) from GENE_METADATA
 
     output:
         stdout REFERENCE_MANIFEST_LINES 
@@ -149,6 +151,7 @@ process reference_manifest_lines {
     """
     echo -e "reference_transcriptome\treference/$referenceFasta\t"
     echo -e "reference_annotation\treference/$referenceGtf\t"
+    echo -e "gene_metadata\treference/$geneMetadata\t"
     """
 }
 
@@ -161,15 +164,18 @@ process publish_reference {
     input:
         file(referenceFasta) from REFERENCE_FASTA
         file(referenceGtf) from REFERENCE_GTF
+        file(geneMetadata) from GENE_METADATA
 
     output:
         file("reference/$referenceFasta")
         file("reference/$referenceGtf")
+        file("reference/$geneMetadata")
         
     """
     mkdir -p reference
     cp -P $referenceFasta reference
     cp -P $referenceGtf reference
+    cp -P $geneMetadata reference
     """
 }
 
