@@ -432,7 +432,7 @@ process repackage_matrices {
     
     conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
    
-    memory { 5.GB * task.attempt }
+    memory { 16.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
  
