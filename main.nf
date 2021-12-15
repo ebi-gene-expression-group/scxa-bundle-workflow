@@ -783,7 +783,7 @@ process bundle_summary {
     
     conda "${workflow.projectDir}/envs/bundle-summary.yml"
     
-    memory { 4.GB * task.attempt }
+    memory { 16.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 ? 'retry' : 'finish' }
     maxRetries 10
     
