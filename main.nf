@@ -492,13 +492,14 @@ process cell_library_mappings {
 
     """
         if [ "$isDroplet" = 'true' ]; then
-            echo "# $sampleField" > cell_to_library.txt
+            echo "# $sampleField" > cell_to_library.txt.tmp
 
             zcat $barcodesFile | while read -r b; do 
                 barcode=\${b##*-} 
                 run=\${b/-\$barcode/''}
                 echo -e "\$b\t\$run" 
-            done >> cell_to_library.txt
+            done >> cell_to_library.txt.tmp
+            mv cell_to_library.txt.tmp cell_to_library.txt
         fi
     """
 }
