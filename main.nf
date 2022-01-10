@@ -504,6 +504,7 @@ process cell_library_mappings {
             nlines=\$(cat \${cellToLib}.tmp | wc -l)
             if [ "\$nlines" -lt 2 ]; then   
                 echo "\${cellToLib}.tmp file creation failed"; 
+                exit 1
             else
                 mv \${cellToLib}.tmp \${cellToLib}
             fi
