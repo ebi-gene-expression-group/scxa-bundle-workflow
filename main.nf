@@ -492,14 +492,21 @@ process cell_library_mappings {
 
     """
         if [ "$isDroplet" = 'true' ]; then
-            echo "# $sampleField" > cell_to_library.txt.tmp
+            cellToLib=cell_to_library.txt
+            echo "# $sampleField" > \${cellToLib}.tmp
 
             zcat $barcodesFile | while read -r b; do 
                 barcode=\${b##*-} 
                 run=\${b/-\$barcode/''}
                 echo -e "\$b\t\$run" 
-            done >> cell_to_library.txt.tmp
-            mv cell_to_library.txt.tmp cell_to_library.txt
+            done >> \${cellToLib}.tmp
+            
+            nlines=$(cat \${cellToLib}.tmp | wc -l)
+            if [ "$nlines" -lt 2 ]; then   
+                echo "Cell_to_library file creation failed"; 
+            else
+                mv \${cellToLib}.tmp \${cellToLib}
+            fi
         fi
     """
 }
