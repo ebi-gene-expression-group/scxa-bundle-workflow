@@ -46,7 +46,7 @@ CELL_METADATA = Channel.fromPath( "$resultsRoot/${params.cellMetadata}", checkIf
 CONDENSED_SDRF = Channel.fromPath( "$resultsRoot/${params.condensedSdrf}", checkIfExists: true).first()
 PROJECT_FILE = Channel.fromPath( "$resultsRoot/${params.projectFile}", checkIfExists: true).first()
 
-if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFworkflow' ){  # do we need to remove scanpy-galaxy options in this script?
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFworkflow' ){  
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
 
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
