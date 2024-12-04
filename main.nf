@@ -11,7 +11,7 @@ tertiarySoftwareReport = 'None'
 
 if ( params.containsKey('tertiaryWorkflow' )){
     tertiaryWorkflow = params.tertiaryWorkflow
-    if ( tertiaryWorkflow == 'scanpy-workflow' ){
+    if ( tertiaryWorkflow == 'scanpy-NFworkflow' ){
         tertiarySoftwareReport = "$resultsRoot/${params.tertiarySoftwareReport}"
     }      
 }else{
