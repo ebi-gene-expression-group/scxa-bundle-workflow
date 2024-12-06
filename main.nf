@@ -298,7 +298,7 @@ MASTER_SOFTWARE
     .collectFile(name: 'software.tsv', newLine: true, keepHeader: true )
     .set { ALL_BASE_SOFTWARE }
 
-if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFworkflow'){
 
     process make_tertiary_software_report {
 
@@ -899,7 +899,7 @@ process base_manifest {
 // Add in any tertiary data to the bundle. If there's no teriary data, just
 // copy the base manifest
 
-if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFworkflow'){
 
 
     BASE_MANIFEST
