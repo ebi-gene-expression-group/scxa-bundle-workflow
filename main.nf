@@ -11,7 +11,7 @@ tertiarySoftwareReport = 'None'
 
 if ( params.containsKey('tertiaryWorkflow' )){
     tertiaryWorkflow = params.tertiaryWorkflow
-    if ( tertiaryWorkflow == 'scanpy-galaxy' ){
+    if ( tertiaryWorkflow == 'scanpy-NFworkflow' ){
         tertiarySoftwareReport = "$resultsRoot/${params.tertiarySoftwareReport}"
     }      
 }else{
@@ -46,7 +46,7 @@ CELL_METADATA = Channel.fromPath( "$resultsRoot/${params.cellMetadata}", checkIf
 CONDENSED_SDRF = Channel.fromPath( "$resultsRoot/${params.condensedSdrf}", checkIfExists: true).first()
 PROJECT_FILE = Channel.fromPath( "$resultsRoot/${params.projectFile}", checkIfExists: true).first()
 
-if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy' ){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFworkflow' ){  
     expressionTypes = expressionTypes + [ 'raw_filtered', 'filtered_normalised' ]
 
     RAW_FILTERED_MATRIX = Channel.fromPath( "$resultsRoot/${params.rawFilteredMatrix}", checkIfExists: true)
@@ -298,7 +298,7 @@ MASTER_SOFTWARE
     .collectFile(name: 'software.tsv', newLine: true, keepHeader: true )
     .set { ALL_BASE_SOFTWARE }
 
-if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFworkflow'){
 
     process make_tertiary_software_report {
 
@@ -899,7 +899,7 @@ process base_manifest {
 // Add in any tertiary data to the bundle. If there's no teriary data, just
 // copy the base manifest
 
-if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-galaxy'){
+if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFworkflow'){
 
 
     BASE_MANIFEST
