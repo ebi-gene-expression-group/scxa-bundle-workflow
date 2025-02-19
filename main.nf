@@ -432,7 +432,7 @@ process repackage_matrices {
     
     conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
    
-    memory { 16.GB * task.attempt }
+    memory { 32.GB * task.attempt }
     errorStrategy = { task.exitStatus in [130, 137..140] ? 'retry' : 'finish' }
     maxRetries 20
  
@@ -792,7 +792,7 @@ process bundle_summary {
     
     conda "${workflow.projectDir}/envs/bundle-summary.yml"
     
-    memory { 16.GB * task.attempt }
+    memory { 32.GB * task.attempt }
     errorStrategy = { task.exitStatus in [130, 137..140] ? 'retry' : 'finish' }
     maxRetries 10
     
