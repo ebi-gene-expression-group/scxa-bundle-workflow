@@ -209,7 +209,7 @@ process filter_tpms {
     conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
     
     memory { 2.GB * task.attempt }
-    errorStrategy = { task.exitStatus in [130, 137..140] ? 'retry' : 'finish' }
+    errorStrategy = { task.exitStatus >= 130 && task.exitStatus <= 140 ? 'retry' : 'finish' }
     maxRetries 10
     
     input:
@@ -631,7 +631,7 @@ process renumber_clusters {
     conda "${workflow.projectDir}/envs/r-data.table.yml"
     
     memory { 5.GB * task.attempt }
-    errorStrategy = { task.exitStatus in [130, 137..140] ? 'retry' : 'finish' }
+    errorStrategy = { task.exitStatus >= 130 && task.exitStatus <= 140 ? 'retry' : 'finish' }
     maxRetries 20
 
     input:
@@ -685,7 +685,7 @@ process renumber_markers {
     conda "${workflow.projectDir}/envs/r-data.table.yml"
     
     memory { 5.GB * task.attempt }
-    errorStrategy = { task.exitStatus in [130, 137..140] ? 'retry' : 'finish' }
+    errorStrategy = { task.exitStatus >= 130 && task.exitStatus <= 140 ? 'retry' : 'finish' }
     maxRetries 20
 
     input:
@@ -794,7 +794,7 @@ process bundle_summary {
     conda "${workflow.projectDir}/envs/bundle-summary.yml"
     
     memory { 16.GB * task.attempt }
-    errorStrategy = { task.exitStatus in [130, 137..140] ? 'retry' : 'finish' }
+    errorStrategy = { task.exitStatus >= 130 && task.exitStatus <= 140 ? 'retry' : 'finish' }
     maxRetries 10
     
     input:
