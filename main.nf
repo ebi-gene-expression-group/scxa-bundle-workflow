@@ -573,32 +573,18 @@ process mtx_to_tsv {
 
     """
         #!/usr/bin/env Rscript
+        
+        suppressPackageStartupMessages(require(DropletUtils))
+        suppressPackageStartupMessages(require(data.table))
+        source(file.path(Sys.getenv(c("SCXA_BIN")), "utils.R"))
+   
+        unzip('$expressionMatrix')
+        sce <- read10xCounts(sub('.zip', '', '$expressionMatrix'))
+        colnames(sce) <- colData(sce)\$Barcode 
 
-        # Error handling function
-        handle_error <- function(e) {
-            cat("Error occurred: ", conditionMessage(e), "\n")
-            quit(status = 1)
-        }
-        
-        tryCatch({
-            suppressPackageStartupMessages(require(DropletUtils))
-            suppressPackageStartupMessages(require(data.table))
-            source(file.path(Sys.getenv(c("SCXA_BIN")), "utils.R"))
-       
-            unzip('$expressionMatrix')
-            sce <- read10xCounts(sub('.zip', '', '$expressionMatrix'))
-            colnames(sce) <- colData(sce)\$Barcode 
-    
-            dir.create('${expressionType}')
-            write.tsv(as.data.frame(cbind(Feature = rownames(sce), as.matrix(assays(sce)[[1]])), col.names = c('Feature', colData(sce)\$Barcode)), "${expressionType}/${expressionType}.tsv")      
-        }, error = function(e) {
-        handle_error(e)
-        })
-        
-        # Check if the output file was created successfully
-        if (!file.exists("${expressionType}/${expressionType}.tsv")) {
-            stop("Output file was not created")
-        }
+        dir.create('${expressionType}')
+        write.tsv(as.data.frame(cbind(Feature = rownames(sce), as.matrix(assays(sce)[[1]])), col.names = c('Feature', colData(sce)\$Barcode)), "${expressionType}/${expressionType}.tsv")      
+   
     """
 }
 
