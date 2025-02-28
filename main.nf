@@ -432,8 +432,8 @@ process repackage_matrices {
     
     conda "${workflow.projectDir}/envs/bioconductor-dropletutils.yml"
    
-    memory { 32.GB * task.attempt }
-    errorStrategy = { task.exitStatus in [130, 137..140] ? 'retry' : 'finish' }
+    memory { 16.GB * task.attempt }
+    errorStrategy = { task.exitStatus >= 130 && task.exitStatus <= 140 ? 'retry' : 'finish' }
     maxRetries 20
  
     input:
@@ -562,7 +562,7 @@ process mtx_to_tsv {
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     memory { 5.GB * task.attempt }
-    errorStrategy = { task.exitStatus in [130, 137..140] ? 'retry' : 'finish' }
+    errorStrategy = { task.exitStatus >= 130 && task.exitStatus <= 140 ? 'retry' : 'finish' }
     maxRetries 20
     
     input:
