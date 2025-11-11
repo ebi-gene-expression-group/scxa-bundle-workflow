@@ -195,7 +195,8 @@ process reference_supplementary_lines {
         file("software_reference.tsv") into REFERENCE_SOFTWARE 
 
     """
-    ensembl_version=\$(echo $referenceGtf | cut -d '.' -f 3)
+    ensembl_version=\$(basename "$referenceGtf" | grep -oE '\\.([0-9]{2,3})(\\.chr)?\\.gtf' | grep -oE '[0-9]{2,3}')
+    
     echo "Analysis\tSoftware\tVersion\tCitation" > software_reference.tsv
     echo -e "Reference\tEnsembl\t\$ensembl_version\t$referenceFasta, $referenceGtf" >> software_reference.tsv
     """
