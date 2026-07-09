@@ -1,5 +1,7 @@
 #!/usr/bin/env nextflow
 
+WorkflowParamValidator.validate(params)
+
 dropletProtocols = [ '10xv1', '10xv1a', '10xv1i', '10xv2', '10xv3', 'drop-seq', 'seq-well', '10x5prime' ]
 smartProtocols = [ 'smart-seq', 'smart-seq2', 'smarter', 'smart-like' ]
 expressionTypes = [ 'raw' ]
@@ -950,4 +952,3 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFwork
     } 
 
 }
-
