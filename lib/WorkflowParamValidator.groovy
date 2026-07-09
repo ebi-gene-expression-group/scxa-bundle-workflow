@@ -3,12 +3,14 @@ import java.util.regex.Pattern
 class WorkflowParamValidator {
     private static final Pattern INTEGER = Pattern.compile(/[0-9]+/)
     private static final Pattern TOKEN = Pattern.compile(/[A-Za-z0-9][A-Za-z0-9._+-]*/)
+    private static final Pattern HAS_DIGIT = Pattern.compile(/.*[0-9].*/)
     private static final Pattern PATH_VALUE = Pattern.compile(/[A-Za-z0-9._+,:=@%\/-]+/)
     private static final Pattern HEADER_VALUE = Pattern.compile(/[^\p{Cntrl}$`"';|&<>]+/)
     private static final Set DROPLET_PROTOCOLS = ['10xv1', '10xv1a', '10xv1i', '10xv2', '10xv3', 'drop-seq', 'seq-well', '10x5prime'] as Set
     private static final Set SMART_PROTOCOLS = ['smart-seq', 'smart-seq2', 'smarter', 'smart-like'] as Set
     private static final Set TERTIARY_WORKFLOWS = ['none', 'scanpy-workflow', 'scanpy-NFworkflow'] as Set
     private static final Set YES_NO = ['yes', 'no'] as Set
+    private static final Set MARKER_TYPES = ['cluster', 'meta'] as Set
 
     static void validate(def params) {
         requirePath(params, 'resultsRoot')
@@ -59,6 +61,44 @@ class WorkflowParamValidator {
 
     static String shellQuote(value) {
         "'" + value.toString().replace("'", "'\"'\"'") + "'"
+    }
+
+    static String scanpyDimredParamValue(def path, String prefix) {
+        def name = basename(path)
+        def matcher = Pattern.compile('^' + Pattern.quote(prefix) + '([0-9]+)\\.tsv$').matcher(name)
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Unexpected Scanpy embedding filename for ${prefix}: '${name}'")
+        }
+        return matcher.group(1)
+    }
+
+    static String scanpyMarkerName(def path) {
+        def name = basename(path)
+        def matcher = Pattern.compile(/^markers_(.+)\.tsv$/).matcher(name)
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Unexpected Scanpy marker filename: '${name}'")
+        }
+        return safeDerivedToken(matcher.group(1), 'Scanpy marker metadata')
+    }
+
+    static String scanpyMarkerType(String markerName) {
+        def safeMarkerName = safeDerivedToken(markerName, 'Scanpy marker metadata')
+        HAS_DIGIT.matcher(safeMarkerName).matches() ? 'cluster' : 'meta'
+    }
+
+    static String scanpyMarkerOutputName(String markerName, String markerType) {
+        def safeMarkerName = safeDerivedToken(markerName, 'Scanpy marker metadata')
+        def safeMarkerType = safeDerivedToken(markerType, 'Scanpy marker type')
+        if (!(safeMarkerType in MARKER_TYPES)) {
+            throw new IllegalArgumentException("Scanpy marker type must be one of ${MARKER_TYPES}; got '${safeMarkerType}'")
+        }
+        def outputName = safeMarkerType == 'meta' ? safeMarkerName.replaceFirst(/^meta_/, '') : safeMarkerName
+        safeDerivedToken(outputName, 'Scanpy marker output metadata')
+    }
+
+    static String safeDerivedToken(value, String label) {
+        assertPattern(value, label, TOKEN)
+        value.toString()
     }
 
     private static void requireProtocolList(def params) {
@@ -133,6 +173,10 @@ class WorkflowParamValidator {
         if (!pattern.matcher(text).matches()) {
             throw new IllegalArgumentException("Invalid workflow parameter ${label}: '${text}'")
         }
+    }
+
+    private static String basename(def path) {
+        path == null ? '' : new File(path.toString()).getName()
     }
 
     private static boolean has(def params, String key) {

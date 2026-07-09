@@ -70,9 +70,32 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFwork
 // Combine t-SNE and UMAP for consistent processing
 
 SCANPY_TSNE
-    .map{ r -> tuple('tsne', 'perplexity', r) }
-    .concat(SCANPY_UMAP.map{ r -> tuple('umap', 'n_neighbors', r) })
-    .set {SCANPY_DIMRED}
+    .map{ r -> tuple('tsne', 'perplexity', WorkflowParamValidator.scanpyDimredParamValue(r, 'tsne_perplexity'), r) }
+    .concat(SCANPY_UMAP.map{ r -> tuple('umap', 'n_neighbors', WorkflowParamValidator.scanpyDimredParamValue(r, 'umap_n_neighbors'), r) })
+    .set {EMBEDDINGS_BY_PARAMVAL}
+
+SCANPY_MARKERS
+    .map{ r ->
+        def markerName = WorkflowParamValidator.scanpyMarkerName(r)
+        def markerType = WorkflowParamValidator.scanpyMarkerType(markerName)
+        tuple(markerType, WorkflowParamValidator.scanpyMarkerOutputName(markerName, markerType), r)
+    }
+    .set {SCANPY_MARKERS_BY_TYPE}
+
+CLUSTER_MARKERS_TYPED = Channel.create()
+META_MARKERS_TYPED = Channel.create()
+
+SCANPY_MARKERS_BY_TYPE.choice(CLUSTER_MARKERS_TYPED, META_MARKERS_TYPED) { row ->
+    row[0] == 'cluster' ? 0 : 1
+}
+
+CLUSTER_MARKERS_TYPED
+    .map{ row -> tuple(row[1], row[2]) }
+    .set {CLUSTER_MARKERS_BY_RESOLUTION}
+
+META_MARKERS_TYPED
+    .map{ row -> tuple(row[1], row[2]) }
+    .set {META_MARKERS_BY_VAR}
 
 // Don't always have TPM matrices
 
@@ -369,23 +392,6 @@ process finalise_software {
     """
 }
 
-// Find out what perplexities are represented by the t-SNE files
-
-process mark_dimred_params {
-
-    executor 'local'
-    
-    input:
-        set val(dimredType), val(param), file(embeddings) from SCANPY_DIMRED
-
-    output:
-        set val(dimredType), val(param), stdout, file (embeddings) into EMBEDDINGS_BY_PARAMVAL
-
-    """
-       echo $embeddings | grep -o -E '[0-9]+' | tr -d \'\\n\'  
-    """
-}
-
 // Combine the listing of t-SNE files for the manifest
 
 process dimred_lines {
@@ -395,7 +401,7 @@ process dimred_lines {
     publishDir "$resultsRoot/bundle", mode: 'move', overwrite: true
     
     input:
-        set val(dimredType), val(param), val(paramVal), file('embeddings') from EMBEDDINGS_BY_PARAMVAL
+        set val(dimredType), val(param), val(paramVal), file('embeddings.tsv') from EMBEDDINGS_BY_PARAMVAL
 
     output:
         stdout TSNE_MANIFEST_LINES
@@ -404,7 +410,7 @@ process dimred_lines {
     """
     outFile=${dimredType}_${param}_${paramVal}.tsv
     echo -e "${dimredType}_embeddings\t\${outFile}\t$paramVal"
-    cp embeddings \$outFile
+    cp embeddings.tsv "\$outFile"
     """
 }
 
@@ -657,33 +663,6 @@ process renumber_clusters {
 FINAL_CLUSTERS.into{
     FINAL_CLUSTERS_FOR_MANIFEST
     FINAL_CLUSTERS_FOR_SUMMARY
-}
-
-// Find out what resolutions are represented by the marker files
-
-process mark_marker_param {
-
-    executor 'local'
-    
-    input:
-        file markersFile from SCANPY_MARKERS
-
-    output:
-        set stdout, file ('cluster_markers.tsv') optional true into CLUSTER_MARKERS_BY_RESOLUTION 
-        set stdout, file ('meta_markers.tsv') optional true into META_MARKERS_BY_VAR 
-
-    """
-        set +e
-        cellgroup_name=\$(echo $markersFile | sed 's/markers_//g' | sed 's/.tsv//g')
-        echo "\$cellgroup_name" | grep -o -E '[0-9]+' > /dev/null
-        if [ \$? -eq 0 ]; then
-            cp -P $markersFile cluster_markers.tsv
-        else
-            cp -P $markersFile meta_markers.tsv
-            cellgroup_name=\$(echo \$cellgroup_name | sed 's/^meta_//')
-        fi
-        echo -n "\$cellgroup_name"
-    """
 }
 
 // Convert the marker files to tsv
