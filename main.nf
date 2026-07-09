@@ -268,7 +268,8 @@ process master_workflow_software {
         file('master.software.tsv') into MASTER_SOFTWARE
 
     """
-        generateSoftwareReport.sh ${masterWorkflow} master.software.tsv
+        MASTER_WORKFLOW=${WorkflowParamValidator.shellQuote(masterWorkflow)}
+        generateSoftwareReport.sh "\$MASTER_WORKFLOW" master.software.tsv
     """        
 }
 
@@ -291,7 +292,8 @@ process make_base_software_report {
     
 
     """
-        generateSoftwareReport.sh ${baseWorkflow} base.software.tsv
+        BASE_WORKFLOW=${WorkflowParamValidator.shellQuote(baseWorkflow)}
+        generateSoftwareReport.sh "\$BASE_WORKFLOW" base.software.tsv
     """
 }
 
@@ -313,12 +315,15 @@ if ( tertiaryWorkflow == 'scanpy-workflow' || tertiaryWorkflow == 'scanpy-NFwork
         if ( tertiaryWorkflow == 'scanpy-workflow' )
 
             """
-                generateSoftwareReport.sh ${tertiaryWorkflow} ${tertiaryWorkflow}.software.tsv
+                TERTIARY_WORKFLOW=${WorkflowParamValidator.shellQuote(tertiaryWorkflow)}
+                generateSoftwareReport.sh "\$TERTIARY_WORKFLOW" "\${TERTIARY_WORKFLOW}.software.tsv"
             """
 
         else
             """
-               cp ${tertiarySoftwareReport} ${tertiaryWorkflow}.software.tsv
+               TERTIARY_WORKFLOW=${WorkflowParamValidator.shellQuote(tertiaryWorkflow)}
+               TERTIARY_SOFTWARE_REPORT=${WorkflowParamValidator.shellQuote(tertiarySoftwareReport)}
+               cp "\$TERTIARY_SOFTWARE_REPORT" "\${TERTIARY_WORKFLOW}.software.tsv"
             """
     }
 
@@ -811,15 +816,16 @@ process bundle_summary {
         set val('tpm_filtered'), file('tpm_filtered_stats.csv') optional true into BUNDLE_SUMMARY_TPM
 
     """
+    TOPMARKERS_FOR_SUMMARY=${WorkflowParamValidator.shellQuote(params.topmarkersForSummary)}
     for matrix_type in filtered_normalised tpm_filtered; do
         if [ -d \${matrix_type}_dir ]; then
             makeMarkerStats.R \
                 --counts-dir=\${matrix_type}_dir \
-                --clusters-file=${clusters} \
+                --clusters-file="${clusters}" \
                 --cluster-markers-dir=cluster_markers \
                 --meta-markers-dir=meta_markers \
-                --cellgroups-file=${cellMeta} \
-                --select-top=${params.topmarkersForSummary} \
+                --cellgroups-file="${cellMeta}" \
+                --select-top="\$TOPMARKERS_FOR_SUMMARY" \
                 --output-file=\${matrix_type}_stats.csv
         fi
     done
@@ -890,12 +896,13 @@ process base_manifest {
         file "BASE_MANIFEST" into BASE_MANIFEST
 
     """
+        PROTOCOL_LIST=${WorkflowParamValidator.shellQuote(params.protocolList)}
         echo -e "Description\tFile\tParameterisation" > BASE_MANIFEST
-        echo -e "software_versions_file\t\$(basename ${software})\t" >> BASE_MANIFEST
-        cat ${matrices} >> BASE_MANIFEST
-        cat ${meta} >> BASE_MANIFEST
-        cat ${reference} >> BASE_MANIFEST
-        echo -e protocol\t\t${params.protocolList} >> BASE_MANIFEST
+        echo -e "software_versions_file\t\$(basename "${software}")\t" >> BASE_MANIFEST
+        cat "${matrices}" >> BASE_MANIFEST
+        cat "${meta}" >> BASE_MANIFEST
+        cat "${reference}" >> BASE_MANIFEST
+        echo -e "protocol\t\t\$PROTOCOL_LIST" >> BASE_MANIFEST
     """
 
 }

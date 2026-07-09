@@ -57,6 +57,10 @@ class WorkflowParamValidator {
         optionalPath(params, 'tpmMatrix')
     }
 
+    static String shellQuote(value) {
+        "'" + value.toString().replace("'", "'\"'\"'") + "'"
+    }
+
     private static void requireProtocolList(def params) {
         requireValue(params, 'params.protocolList', 'protocolList')
         def protocols = params.protocolList.toString().split(',') as List
